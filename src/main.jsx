@@ -220,8 +220,8 @@ function TradesTable({ trades }) {
             <th>卖出日期</th>
             {isPT && <th>量子算法买入价</th>}
             {isPT && <th>量子算法卖出价</th>}
-            <th>真实买入价</th>
-            <th>真实卖出价</th>
+            <th>买入价</th>
+            <th>卖出价</th>
             <th>绝对收益</th>
             <th>收益率</th>
           </tr>

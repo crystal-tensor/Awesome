@@ -188,7 +188,7 @@ def build_strategy(df: pd.DataFrame, prefix: str, open_col: str, high_col: str, 
             real_sell_price = row[real_close_col]
             abs_ret = real_sell_price - real_buy_price
             trade_ret = abs_ret / real_buy_price
-            
+
             trade_data = {
                 "买入日期": buy_date.strftime("%Y-%m-%d"),
                 "卖出日期": date.strftime("%Y-%m-%d"),
@@ -196,14 +196,13 @@ def build_strategy(df: pd.DataFrame, prefix: str, open_col: str, high_col: str, 
             if prefix == "pt":
                 trade_data["量子算法买入价"] = round(float(buy_price), 2)
                 trade_data["量子算法卖出价"] = round(float(sell_price), 2)
-                
+
             trade_data["买入价"] = round(float(real_buy_price), 2)
             trade_data["卖出价"] = round(float(real_sell_price), 2)
             trade_data["绝对收益"] = round(float(abs_ret), 2)
             trade_data["收益率"] = round(float(trade_ret), 6)
-            
+
             trades.append(trade_data)
-            
             buy_price = 0
             real_buy_price = 0
 

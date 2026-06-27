@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FinTerra Quantum Synthetic Market Data</title>
+    <style>
+      :root {
+        --bg: #04070c;
+        --panel: rgba(12, 20, 34, 0.78);
+        --panel-strong: rgba(16, 27, 46, 0.94);
+        --line: rgba(150, 169, 196, 0.18);
+        --text: #edf5ff;
+        --muted: #91a6be;
+        --soft: #c0cfdf;
+        --cyan: #2ee6ff;
+        --green: #42dca5;
+        --violet: #9d8cff;
+        --amber: #e9bd62;
+        --red: #ff747d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 14% 8%, rgba(46, 230, 255, 0.15), transparent 30%),
+          radial-gradient(circle at 82% 14%, rgba(157, 140, 255, 0.13), transparent 24%),
+          radial-gradient(circle at 62% 94%, rgba(66, 220, 165, 0.09), transparent 32%),
+          linear-gradient(180deg, #04070c 0%, #07111d 46%, #04070c 100%);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(46, 230, 255, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(46, 230, 255, 0.035) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: radial-gradient(ellipse at 50% 20%, black 0%, transparent 78%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px clamp(20px, 4vw, 56px);
+        border-bottom: 1px solid var(--line);
+        background: rgba(4, 7, 12, 0.86);
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+      }
+
+      .brand-mark {
+        width: 25px;
+        height: 25px;
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 34% 34%, #ffffff 0 9%, transparent 10%),
+          conic-gradient(from 100deg, var(--cyan), var(--violet), var(--green), var(--cyan));
+        box-shadow: 0 0 28px rgba(46, 230, 255, 0.38);
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 24px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .nav-links a:hover {
+        color: var(--cyan);
+      }
+
+      .hero {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(400px, 0.9fr);
+        gap: clamp(32px, 5vw, 76px);
+        min-height: calc(100vh - 58px);
+        padding: clamp(70px, 10vw, 126px) clamp(20px, 4vw, 56px) 78px;
+        align-items: center;
+      }
+
+      .eyebrow {
+        margin: 0 0 18px;
+        color: var(--cyan);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(46px, 7.2vw, 92px);
+        line-height: 1.02;
+        letter-spacing: 0;
+      }
+
+      .gradient-text {
+        display: block;
+        color: transparent;
+        background: linear-gradient(112deg, #ffffff 0%, var(--cyan) 38%, var(--green) 78%);
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+
+      .hero-copy {
+        max-width: 760px;
+        margin: 24px 0 0;
+        color: var(--soft);
+        font-size: clamp(16px, 2vw, 20px);
+        line-height: 1.74;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 34px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 22px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.04);
+        font-weight: 750;
+      }
+
+      .button.primary {
+        color: #031016;
+        border-color: rgba(46, 230, 255, 0.4);
+        background: linear-gradient(135deg, var(--cyan), var(--green));
+        box-shadow: 0 18px 48px rgba(46, 230, 255, 0.16);
+      }
+
+      .boundary-note {
+        margin-top: 28px;
+        max-width: 760px;
+        padding: 14px 16px;
+        border: 1px solid rgba(233, 189, 98, 0.28);
+        border-radius: 8px;
+        color: #f4d790;
+        background: rgba(233, 189, 98, 0.07);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .globe-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 560px;
+        border: 1px solid rgba(150, 169, 196, 0.22);
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 52% 44%, rgba(46, 230, 255, 0.14), transparent 28%),
+          linear-gradient(180deg, rgba(15, 24, 40, 0.96), rgba(6, 12, 21, 0.94));
+        box-shadow: 0 28px 90px rgba(0, 0, 0, 0.44);
+      }
+
+      .globe {
+        position: absolute;
+        width: 340px;
+        height: 340px;
+        left: 50%;
+        top: 42%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 35% 32%, rgba(255, 255, 255, 0.2), transparent 16%),
+          radial-gradient(circle at 60% 62%, rgba(66, 220, 165, 0.18), transparent 20%),
+          repeating-linear-gradient(12deg, rgba(46, 230, 255, 0.12) 0 2px, transparent 2px 20px),
+          linear-gradient(145deg, rgba(19, 35, 58, 0.95), rgba(4, 8, 14, 1));
+        border: 1px solid rgba(46, 230, 255, 0.28);
+        box-shadow:
+          inset -28px -28px 60px rgba(0, 0, 0, 0.46),
+          0 0 80px rgba(46, 230, 255, 0.2);
+      }
+
+      .orbit {
+        position: absolute;
+        left: 50%;
+        top: 42%;
+        border: 1px solid rgba(150, 169, 196, 0.14);
+        border-radius: 50%;
+        transform: translate(-50%, -50%) rotate(var(--r));
+      }
+
+      .orbit.one {
+        width: 500px;
+        height: 180px;
+        --r: 16deg;
+      }
+
+      .orbit.two {
+        width: 460px;
+        height: 260px;
+        --r: -28deg;
+      }
+
+      .node {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--cyan);
+        box-shadow: 0 0 20px var(--cyan);
+        animation: pulse 2.4s ease-in-out infinite;
+      }
+
+      .node.n1 { left: 18%; top: 31%; }
+      .node.n2 { left: 72%; top: 29%; background: var(--green); box-shadow: 0 0 20px var(--green); animation-delay: 0.4s; }
+      .node.n3 { left: 64%; top: 62%; background: var(--violet); box-shadow: 0 0 20px var(--violet); animation-delay: 0.8s; }
+      .node.n4 { left: 30%; top: 68%; background: var(--amber); box-shadow: 0 0 20px var(--amber); animation-delay: 1.1s; }
+
+      @keyframes pulse {
+        0%, 100% { transform: scale(0.8); opacity: 0.65; }
+        50% { transform: scale(1.55); opacity: 1; }
+      }
+
+      .globe-caption {
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        bottom: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .stat {
+        padding: 14px;
+        border: 1px solid rgba(150, 169, 196, 0.18);
+        border-radius: 8px;
+        background: rgba(4, 7, 12, 0.66);
+        backdrop-filter: blur(14px);
+      }
+
+      .stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .stat strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 23px;
+      }
+
+      .section {
+        padding: 88px clamp(20px, 4vw, 56px);
+      }
+
+      .section-inner {
+        width: min(1180px, 100%);
+        margin: 0 auto;
+      }
+
+      .section-head {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 34px;
+        align-items: end;
+        margin-bottom: 34px;
+      }
+
+      .section h2 {
+        margin: 0;
+        font-size: clamp(30px, 4.2vw, 56px);
+        line-height: 1.14;
+      }
+
+      .section-desc {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.76;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+
+      .card {
+        position: relative;
+        overflow: hidden;
+        min-height: 220px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .card::after {
+        content: attr(data-index);
+        position: absolute;
+        right: 18px;
+        top: 12px;
+        color: rgba(255, 255, 255, 0.045);
+        font-size: 76px;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .card h3 {
+        position: relative;
+        z-index: 1;
+        margin: 0 0 12px;
+        font-size: 19px;
+      }
+
+      .card p {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.72;
+        font-size: 14px;
+      }
+
+      .tag-row {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .tag {
+        border: 1px solid rgba(46, 230, 255, 0.24);
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: #c7f8ff;
+        background: rgba(46, 230, 255, 0.06);
+        font-size: 12px;
+      }
+
+      .matrix {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-strong);
+      }
+
+      .matrix-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        border-top: 1px solid var(--line);
+      }
+
+      .matrix-row:first-child {
+        border-top: 0;
+        background: rgba(46, 230, 255, 0.07);
+      }
+
+      .matrix-row > div {
+        min-height: 72px;
+        padding: 18px;
+        border-left: 1px solid var(--line);
+        color: var(--soft);
+        line-height: 1.62;
+      }
+
+      .matrix-row > div:first-child {
+        border-left: 0;
+        color: var(--text);
+        font-weight: 750;
+      }
+
+      .matrix-row strong {
+        color: var(--green);
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+      }
+
+      .step {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(12, 20, 34, 0.68);
+      }
+
+      .step span {
+        display: inline-flex;
+        width: 30px;
+        height: 30px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: #031016;
+        background: var(--cyan);
+        font-weight: 900;
+      }
+
+      .step h3 {
+        margin: 16px 0 8px;
+        font-size: 16px;
+      }
+
+      .step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.66;
+      }
+
+      .compliance {
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(7, 16, 27, 0.96), rgba(7, 12, 20, 0.98));
+      }
+
+      .boundary {
+        padding: 22px;
+        border: 1px solid rgba(150, 169, 196, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.026);
+      }
+
+      .boundary small {
+        display: inline-flex;
+        margin-bottom: 12px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        color: #051016;
+        background: var(--green);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+      }
+
+      .boundary.no small {
+        background: var(--red);
+      }
+
+      .boundary h3 {
+        margin: 0 0 8px;
+      }
+
+      .boundary p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .cta {
+        text-align: center;
+        padding: 104px clamp(20px, 4vw, 56px);
+      }
+
+      .cta h2 {
+        max-width: 860px;
+        margin: 0 auto 16px;
+        font-size: clamp(32px, 5.2vw, 64px);
+        line-height: 1.1;
+      }
+
+      .cta p {
+        max-width: 760px;
+        margin: 0 auto 30px;
+        color: var(--muted);
+        line-height: 1.76;
+      }
+
+      footer {
+        padding: 28px clamp(20px, 4vw, 56px);
+        border-top: 1px solid var(--line);
+        color: #657792;
+        font-size: 12px;
+        line-height: 1.7;
+      }
+
+      @media (max-width: 960px) {
+        .hero,
+        .section-head,
+        .grid-3,
+        .grid-2,
+        .workflow {
+          grid-template-columns: 1fr;
+        }
+
+        .nav-links {
+          display: none;
+        }
+
+        .globe-card {
+          min-height: 500px;
+        }
+
+        .matrix-row {
+          grid-template-columns: 1fr;
+        }
+
+        .matrix-row > div {
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav">
+      <a class="brand" href="#">
+        <span class="brand-mark"></span>
+        <span>FinTerra Quantum Data</span>
+      </a>
+      <div class="nav-links">
+        <a href="#model">Model</a>
+        <a href="#advantage">Advantage</a>
+        <a href="#evidence">Research Use</a>
+        <a href="#compliance">Compliance</a>
+        <a href="index1.html">中文</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Quantum synthetic market data engine</p>
+        <h1>
+          Generate market worlds.
+          <span class="gradient-text">Do not sell trading promises.</span>
+        </h1>
+        <p class="hero-copy">
+          FinTerra is a quantum market data generation model for research teams that need more than one historical path.
+          It creates synthetic price, return, volatility and scenario datasets for backtesting, stress testing and model research.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#workflow">Request model access</a>
+          <a class="button" href="#compliance">Read the boundary</a>
+        </div>
+        <div class="boundary-note">
+          FinTerra does not provide investment advice, trading signals, order execution, portfolio management or return guarantees.
+          Customers buy access to a data generation model and decide independently how to use the synthetic datasets.
+        </div>
+      </div>
+
+      <div class="globe-card" aria-label="Quantum synthetic market globe">
+        <div class="orbit one"></div>
+        <div class="orbit two"></div>
+        <div class="globe"></div>
+        <span class="node n1"></span>
+        <span class="node n2"></span>
+        <span class="node n3"></span>
+        <span class="node n4"></span>
+        <div class="globe-caption">
+          <div class="stat">
+            <span>Scenario paths</span>
+            <strong>12k+</strong>
+          </div>
+          <div class="stat">
+            <span>Regime labels</span>
+            <strong>48</strong>
+          </div>
+          <div class="stat">
+            <span>Reproducible seeds</span>
+            <strong>100%</strong>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="section" id="model">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">What the model does</p>
+            <h2>A synthetic data layer for quantitative research</h2>
+          </div>
+          <p class="section-desc">
+            Historical data gives you one realized path. FinTerra generates a controlled distribution of alternative market paths, with metadata, seeds and scenario labels, so research teams can test how their own methods behave under more market conditions.
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card" data-index="01">
+            <h3>Path generation</h3>
+            <p>Generate synthetic price, return, volume, volatility and shock series with user-defined frequency, horizon, regime mix and tail-event intensity.</p>
+            <div class="tag-row">
+              <span class="tag">Price paths</span>
+              <span class="tag">Volatility clusters</span>
+              <span class="tag">Tail events</span>
+            </div>
+          </article>
+          <article class="card" data-index="02">
+            <h3>Scenario engineering</h3>
+            <p>Create bull, bear, sideways, high-volatility, low-liquidity, mean-reversion, trend-following and crisis-like environments for research workflows.</p>
+            <div class="tag-row">
+              <span class="tag">Regime states</span>
+              <span class="tag">Liquidity stress</span>
+              <span class="tag">Cross-asset shocks</span>
+            </div>
+          </article>
+          <article class="card" data-index="03">
+            <h3>Audit-ready outputs</h3>
+            <p>Every dataset can include the model version, seed, parameter set, field dictionary, generation summary and reproducibility metadata.</p>
+            <div class="tag-row">
+              <span class="tag">Model version</span>
+              <span class="tag">Seed control</span>
+              <span class="tag">Dataset report</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="advantage">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Quantum model advantage</p>
+            <h2>Designed for non-linear, heavy-tailed markets</h2>
+          </div>
+          <p class="section-desc">
+            The model is built to express market structures that are hard to cover with a single historical sample: latent regime shifts, path dependency, volatility clustering, fat tails and cross-asset transmission.
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card" data-index="Q1">
+            <h3>Regime superposition</h3>
+            <p>Blend multiple market states into one generation process, allowing datasets to move between trend, reversal, compression and stress conditions.</p>
+          </article>
+          <article class="card" data-index="Q2">
+            <h3>Path diversity</h3>
+            <p>Produce many statistically distinct paths from the same research hypothesis, rather than repeatedly testing against one historical realization.</p>
+          </article>
+          <article class="card" data-index="Q3">
+            <h3>Tail-aware simulation</h3>
+            <p>Control jump intensity, volatility clustering and drawdown-like segments to study strategy behavior during rare or compressed market events.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="evidence">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Research use case</p>
+            <h2>Same strategy, different data environment</h2>
+          </div>
+          <p class="section-desc">
+            A common commercial demonstration is to run a fixed customer-owned quantitative strategy on both historical data and FinTerra-generated synthetic samples. The point is not to claim future returns; it is to show that synthetic datasets can expand research coverage and reveal strategy behavior under additional market worlds.
+          </p>
+        </div>
+
+        <div class="matrix">
+          <div class="matrix-row">
+            <div>Dimension</div>
+            <div>Historical market data</div>
+            <div>FinTerra synthetic datasets</div>
+          </div>
+          <div class="matrix-row">
+            <div>Path coverage</div>
+            <div>Limited to realized market history.</div>
+            <div><strong>Batch-generated alternatives</strong> across regimes, shocks and liquidity conditions.</div>
+          </div>
+          <div class="matrix-row">
+            <div>Research efficiency</div>
+            <div>Research may overfit one time window or one market cycle.</div>
+            <div><strong>Broader sample exploration</strong> for stress tests and sensitivity analysis.</div>
+          </div>
+          <div class="matrix-row">
+            <div>Performance language</div>
+            <div>Backtests are not forward-looking guarantees.</div>
+            <div><strong>Synthetic backtests are also not guarantees</strong>; they are research diagnostics only.</div>
+          </div>
+          <div class="matrix-row">
+            <div>What customers buy</div>
+            <div>Historical data access or database licenses.</div>
+            <div><strong>Model access</strong> to generate synthetic market datasets and audit reports.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="workflow">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Commercial workflow</p>
+            <h2>From scenario request to synthetic dataset delivery</h2>
+          </div>
+          <p class="section-desc">
+            FinTerra is sold as a data generation capability. Customers define the scenario, receive datasets, validate the files and use them inside their own research and governance process.
+          </p>
+        </div>
+
+        <div class="workflow">
+          <div class="step">
+            <span>1</span>
+            <h3>Specify</h3>
+            <p>Choose asset type, horizon, frequency, regime mix, volatility range and output fields.</p>
+          </div>
+          <div class="step">
+            <span>2</span>
+            <h3>Generate</h3>
+            <p>The model creates synthetic market paths with seeds and parameter records.</p>
+          </div>
+          <div class="step">
+            <span>3</span>
+            <h3>Validate</h3>
+            <p>Inspect field quality, scenario coverage, reproducibility and metadata.</p>
+          </div>
+          <div class="step">
+            <span>4</span>
+            <h3>Deliver</h3>
+            <p>Export datasets through files or API, with a generation summary.</p>
+          </div>
+          <div class="step">
+            <span>5</span>
+            <h3>Research</h3>
+            <p>Customers use the data independently in their own research systems.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section compliance" id="compliance">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Compliance boundary</p>
+            <h2>Clear product boundary, global sales language</h2>
+          </div>
+          <p class="section-desc">
+            FinTerra is positioned as a synthetic market data generation model. Its outputs can support research, testing, model development and education, but they are not recommendations or return predictions.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <article class="boundary">
+            <small>ALLOWED</small>
+            <h3>Sell model access and synthetic data generation</h3>
+            <p>Commercialize model usage, generation credits, scenario configuration, dataset files, reproducibility metadata and audit-ready summaries.</p>
+          </article>
+          <article class="boundary">
+            <small>ALLOWED</small>
+            <h3>Show research demonstrations with conditions</h3>
+            <p>Demonstrate how a fixed strategy behaves on synthetic datasets, provided the assumptions, limitations and non-guarantee language are clearly disclosed.</p>
+          </article>
+          <article class="boundary no">
+            <small>NOT PROVIDED</small>
+            <h3>No investment advice or trading signals</h3>
+            <p>FinTerra does not provide buy, sell, hold, allocation, timing, portfolio construction or security selection advice.</p>
+          </article>
+          <article class="boundary no">
+            <small>NOT PROVIDED</small>
+            <h3>No return guarantee or asset management</h3>
+            <p>FinTerra does not manage capital, execute orders, connect to brokerage accounts or promise improved live trading performance.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <h2>Give your research more market paths.</h2>
+      <p>
+        Buy access to the model. Generate synthetic market datasets. Test your own ideas under more controlled scenarios. Keep the investment decision, governance and risk responsibility on your side.
+      </p>
+      <div class="hero-actions" style="justify-content: center;">
+        <a class="button primary" href="mailto:contact@finterra.ai">Request access</a>
+        <a class="button" href="index1.html">Chinese version</a>
+      </div>
+    </section>
+
+    <footer>
+      FinTerra provides synthetic market data generation tools for research use only. It does not provide investment advice, trading signals, execution, portfolio management, return forecasts or performance guarantees. Customers are responsible for their own use, validation, compliance review and investment decisions.
+    </footer>
+  </body>
+</html>

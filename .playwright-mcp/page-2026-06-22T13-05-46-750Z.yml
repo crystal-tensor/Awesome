@@ -1,0 +1,13 @@
+- main [ref=e3]:
+  - navigation [ref=e4]:
+    - link "FinTerra" [ref=e5] [cursor=pointer]:
+      - /url: index.html
+      - generic [ref=e6]: FinTerra
+    - generic [ref=e7]:
+      - link "全球图谱" [ref=e8] [cursor=pointer]:
+        - /url: global_financial_map.html
+      - link "策略工作台" [ref=e9] [cursor=pointer]:
+        - /url: strategy.html
+      - link "五代演进" [ref=e10] [cursor=pointer]:
+        - /url: agent_finance_evolution.html
+  - heading "正在构建金融资讯推演实验室……" [level=2] [ref=e13]

@@ -1,0 +1,11 @@
+{
+  "name": "finterra-promo-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.7.14 preview",
+    "check": "npx --yes hyperframes@0.7.14 lint && npx --yes hyperframes@0.7.14 validate && npx --yes hyperframes@0.7.14 inspect",
+    "render": "npx --yes hyperframes@0.7.14 render",
+    "publish": "npx --yes hyperframes@0.7.14 publish"
+  }
+}

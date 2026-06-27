@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Barlow Condensed";
+        src: url("assets/fonts/barlow-condensed-400.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 400;
+      }
+
+      @font-face {
+        font-family: "Barlow Condensed";
+        src: url("assets/fonts/barlow-condensed-500.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 500;
+      }
+
+      @font-face {
+        font-family: "Barlow Condensed";
+        src: url("assets/fonts/barlow-condensed-700.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 700;
+      }
+
+      @font-face {
+        font-family: "Barlow Condensed";
+        src: url("assets/fonts/barlow-condensed-900.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 900;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0b111c;
+      }
+
+      body {
+        font-family: "Barlow Condensed", sans-serif;
+        color: #f8fbff;
+      }
+
+      [data-composition-id="main"] {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0b111c;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0b111c;
+      }
+
+      .scene.light {
+        background: #f4f7fb;
+        color: #18212f;
+      }
+
+      .scene:not(#scene-1) {
+        opacity: 0;
+      }
+
+      .scene::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 18% 18%, rgba(82, 215, 247, 0.22), rgba(82, 215, 247, 0) 28%),
+          radial-gradient(circle at 78% 72%, rgba(225, 29, 72, 0.16), rgba(225, 29, 72, 0) 26%),
+          #0b111c;
+        opacity: 0.92;
+      }
+
+      .scene.light::before {
+        background:
+          radial-gradient(circle at 18% 10%, rgba(47, 109, 246, 0.16), rgba(47, 109, 246, 0) 30%),
+          radial-gradient(circle at 88% 70%, rgba(15, 118, 110, 0.12), rgba(15, 118, 110, 0) 28%),
+          #f4f7fb;
+      }
+
+      .grid-lines {
+        position: absolute;
+        inset: 0;
+        opacity: 0.3;
+        background-image:
+          linear-gradient(rgba(82, 215, 247, 0.08) 1px, rgba(82, 215, 247, 0) 1px),
+          linear-gradient(90deg, rgba(82, 215, 247, 0.08) 1px, rgba(82, 215, 247, 0) 1px);
+        background-size: 80px 80px;
+      }
+
+      .scene.light .grid-lines {
+        opacity: 0.42;
+        background-image:
+          linear-gradient(rgba(16, 32, 51, 0.08) 1px, rgba(16, 32, 51, 0) 1px),
+          linear-gradient(90deg, rgba(16, 32, 51, 0.08) 1px, rgba(16, 32, 51, 0) 1px);
+      }
+
+      .scene-content {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: 690px minmax(0, 1fr);
+        gap: 54px;
+        padding: 78px 84px;
+      }
+
+      .scene-content.reverse {
+        grid-template-columns: minmax(0, 1fr) 660px;
+      }
+
+      .copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 24px;
+        min-width: 0;
+      }
+
+      .kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        width: fit-content;
+        min-height: 36px;
+        padding: 7px 13px;
+        border: 1px solid rgba(82, 215, 247, 0.42);
+        color: #52d7f7;
+        font: 700 20px/1 "JetBrains Mono", monospace;
+        text-transform: uppercase;
+      }
+
+      .scene.light .kicker {
+        border-color: rgba(47, 109, 246, 0.28);
+        color: #0f766e;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1,
+      h2 {
+        max-width: 720px;
+        font-weight: 900;
+        line-height: 0.94;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 118px;
+      }
+
+      h2 {
+        font-size: 82px;
+      }
+
+      .lede {
+        max-width: 660px;
+        font: 500 35px/1.38 "Barlow Condensed", sans-serif;
+        color: #d8e5f3;
+      }
+
+      .scene.light .lede {
+        color: #334155;
+      }
+
+      .proof-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        max-width: 690px;
+      }
+
+      .proof {
+        min-width: 156px;
+        padding: 18px 20px;
+        border: 1px solid rgba(82, 215, 247, 0.28);
+        background: rgba(8, 15, 28, 0.72);
+      }
+
+      .scene.light .proof {
+        border-color: #d9e3ef;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .proof small {
+        display: block;
+        margin-bottom: 8px;
+        color: #9fb0c5;
+        font: 700 18px/1.2 "JetBrains Mono", monospace;
+      }
+
+      .scene.light .proof small {
+        color: #64748b;
+      }
+
+      .proof strong {
+        display: block;
+        font: 900 44px/1 "Barlow Condensed", sans-serif;
+        color: #ffffff;
+      }
+
+      .scene.light .proof strong {
+        color: #0f766e;
+      }
+
+      .screen-frame {
+        align-self: center;
+        min-width: 0;
+        height: 790px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(7, 12, 22, 0.84);
+        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.42);
+        overflow: hidden;
+      }
+
+      .scene.light .screen-frame {
+        border-color: #d9e3ef;
+        background: #ffffff;
+        box-shadow: 0 30px 70px rgba(16, 32, 51, 0.18);
+      }
+
+      .screen-frame.tall {
+        height: 850px;
+      }
+
+      .screen-frame.short {
+        height: 660px;
+      }
+
+      .screen-img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center top;
+      }
+
+      .screen-img.left {
+        object-position: left top;
+      }
+
+      .screen-img.center {
+        object-position: center center;
+      }
+
+      .caption-band {
+        position: absolute;
+        left: 84px;
+        right: 84px;
+        bottom: 46px;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 28px;
+        min-height: 70px;
+        padding: 16px 24px;
+        border: 1px solid rgba(82, 215, 247, 0.25);
+        background: rgba(8, 15, 28, 0.82);
+        color: #f8fbff;
+      }
+
+      .scene.light .caption-band {
+        border-color: #d9e3ef;
+        background: rgba(255, 255, 255, 0.9);
+        color: #18212f;
+      }
+
+      .caption-band span {
+        font: 700 32px/1.25 "Barlow Condensed", sans-serif;
+      }
+
+      .caption-band code {
+        flex: 0 0 auto;
+        color: #52d7f7;
+        font: 800 22px/1 "JetBrains Mono", monospace;
+      }
+
+      .scene.light .caption-band code {
+        color: #2f6df6;
+      }
+
+      .pillar-grid,
+      .market-grid,
+      .compare-grid {
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      .pillar,
+      .market-proof,
+      .compare-card {
+        min-height: 178px;
+        padding: 24px;
+        border: 1px solid rgba(82, 215, 247, 0.26);
+        background: rgba(8, 15, 28, 0.74);
+      }
+
+      .scene.light .pillar,
+      .scene.light .market-proof,
+      .scene.light .compare-card {
+        border-color: #d9e3ef;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .pillar b,
+      .market-proof b,
+      .compare-card b {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 34px;
+        line-height: 1.05;
+      }
+
+      .pillar p,
+      .market-proof p,
+      .compare-card p {
+        color: #bfd1e6;
+        font: 500 24px/1.32 "Barlow Condensed", sans-serif;
+      }
+
+      .scene.light .pillar p,
+      .scene.light .market-proof p,
+      .scene.light .compare-card p {
+        color: #475569;
+      }
+
+      .market-proof strong,
+      .compare-card strong {
+        display: block;
+        margin-top: 10px;
+        font: 900 58px/1 "Barlow Condensed", sans-serif;
+        color: #52d7f7;
+      }
+
+      .scene.light .market-proof strong {
+        color: #0f766e;
+      }
+
+      .compare-card.quantum {
+        border-color: rgba(225, 29, 72, 0.48);
+        background: rgba(225, 29, 72, 0.13);
+      }
+
+      .compare-card.quantum strong {
+        color: #ff4f7d;
+      }
+
+      .scene.light .compare-card.quantum strong {
+        color: #e11d48;
+      }
+
+      .pipeline {
+        align-self: center;
+        display: grid;
+        gap: 18px;
+      }
+
+      .pipe-step {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 1fr);
+        align-items: center;
+        gap: 18px;
+        min-height: 102px;
+        padding: 22px;
+        border: 1px solid rgba(82, 215, 247, 0.25);
+        background: rgba(8, 15, 28, 0.72);
+      }
+
+      .pipe-step span {
+        color: #52d7f7;
+        font: 900 34px/1 "JetBrains Mono", monospace;
+      }
+
+      .pipe-step b {
+        font-size: 34px;
+      }
+
+      .pipe-step p {
+        color: #bfd1e6;
+        font: 500 22px/1.32 "Barlow Condensed", sans-serif;
+      }
+
+      .split-screens {
+        align-self: center;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .split-screens .screen-frame {
+        height: 700px;
+      }
+
+      .callout {
+        position: absolute;
+        z-index: 5;
+        min-width: 260px;
+        padding: 18px 22px;
+        border: 1px solid rgba(82, 215, 247, 0.36);
+        background: rgba(8, 15, 28, 0.86);
+        color: #f8fbff;
+      }
+
+      .scene.light .callout {
+        border-color: #d9e3ef;
+        background: #ffffff;
+        color: #18212f;
+      }
+
+      .callout small {
+        display: block;
+        margin-bottom: 6px;
+        color: #9fb0c5;
+        font: 800 18px/1 "JetBrains Mono", monospace;
+      }
+
+      .callout strong {
+        display: block;
+        font: 900 52px/1 "Barlow Condensed", sans-serif;
+        color: #52d7f7;
+      }
+
+      .scene.light .callout strong {
+        color: #0f766e;
+      }
+
+      .risk-note {
+        font: 600 24px/1.35 "Barlow Condensed", sans-serif;
+        color: #cbd5e1;
+      }
+
+      .scene.light .risk-note {
+        color: #64748b;
+      }
+
+      .brand-lockup {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .brand-mark {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 2px solid rgba(82, 215, 247, 0.6);
+        background:
+          radial-gradient(circle at 30% 28%, #ffffff, rgba(255, 255, 255, 0) 18%),
+          radial-gradient(circle at 58% 62%, #52d7f7, rgba(82, 215, 247, 0) 45%),
+          #102033;
+      }
+
+      .brand-name {
+        font: 900 82px/1 "Barlow Condensed", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-plbr" id="root" data-composition-id="main" data-start="0" data-duration="180" data-width="1920" data-height="1080">
+      <audio data-hf-id="hf-sxwe" id="finterra-audio" data-start="0" data-duration="180" data-track-index="20" data-volume="1" src="audio/finterra-promo-mix.mp3"></audio>
+
+      <section data-hf-id="hf-px3q" data-layout-allow-overlap="" id="scene-1" class="scene">
+        <div data-hf-id="hf-kcs6" class="grid-lines"></div>
+        <div data-hf-id="hf-cn5c" class="scene-content">
+          <div data-hf-id="hf-bdx3" class="copy">
+            <div data-hf-id="hf-e51p" class="kicker enter">FINTERRA RESEARCH OS</div>
+            <h1 data-hf-id="hf-ymrq" class="enter">金融决策，不能只靠一张报表。</h1>
+            <p data-hf-id="hf-ntwh" class="lede enter">当新闻、资产、模型和回测分散在不同工具里，真正的风险往往藏在传导路径中。</p>
+            <div data-hf-id="hf-2r9z" class="proof-row enter">
+              <div data-hf-id="hf-0nwy" class="proof"><small data-hf-id="hf-d8s0">入口</small><strong data-hf-id="hf-6wau">资讯图谱</strong></div>
+              <div data-hf-id="hf-vlue" class="proof"><small data-hf-id="hf-m2xi">方法</small><strong data-hf-id="hf-erc2">多智能体推演</strong></div>
+            </div>
+          </div>
+          <figure data-hf-id="hf-lpyy" data-layout-allow-overflow="" class="screen-frame enter">
+            <img data-hf-id="hf-hqx3" class="screen-img" src="assets/captures/lab-01-initial-1920.png" alt="FinTerra financial intelligence lab">
+          </figure>
+        </div>
+        <div data-hf-id="hf-zwgs" class="caption-band enter"><span data-hf-id="hf-9ll0">从一个问题，进入完整的金融研究链路。</span><code data-hf-id="hf-5hsi">00:00</code></div>
+      </section>
+
+      <section data-hf-id="hf-lyzp" data-layout-allow-overlap="" id="scene-2" class="scene">
+        <div data-hf-id="hf-ry8q" class="grid-lines"></div>
+        <div data-hf-id="hf-nsui" class="scene-content reverse">
+          <div data-hf-id="hf-uyf9" class="pillar-grid">
+            <article data-hf-id="hf-iscn" class="pillar enter"><b data-hf-id="hf-2c5p">实时资讯图谱</b><p data-hf-id="hf-fi7b">把 news 目录、RSS 快照和资产节点重新编织成市场关系网。</p></article>
+            <article data-hf-id="hf-k4rr" class="pillar enter"><b data-hf-id="hf-xdf2">MiroFish 推演</b><p data-hf-id="hf-vj4s">围绕同一个问题生成角色、交叉质询、收敛分歧。</p></article>
+            <article data-hf-id="hf-jqgq" class="pillar enter"><b data-hf-id="hf-14th">PT 合成数据</b><p data-hf-id="hf-t838">用重尾先验生成更关注极端状态的 OHLCV 路径。</p></article>
+            <article data-hf-id="hf-jc5p" class="pillar enter"><b data-hf-id="hf-3s2n">策略对照验证</b><p data-hf-id="hf-rhep">同一套策略，在真实路径与 PT 路径上并排回测。</p></article>
+          </div>
+          <div data-hf-id="hf-r8s7" class="copy">
+            <div data-hf-id="hf-l6fi" class="kicker enter">ONE WORKBENCH</div>
+            <h2 data-hf-id="hf-akct" class="enter">从资讯，到模型，到可复盘的收益证据。</h2>
+            <p data-hf-id="hf-y319" class="lede enter">FinTerra 不是把 AI 做成聊天框，而是把金融研究流程做成可运行、可验证的工作台。</p>
+          </div>
+        </div>
+        <div data-hf-id="hf-9jpw" class="caption-band enter"><span data-hf-id="hf-75ap">资讯、推演、合成数据、策略验证，连成一条证据链。</span><code data-hf-id="hf-52j8">00:15</code></div>
+      </section>
+
+      <section data-hf-id="hf-l7bw" data-layout-allow-overlap="" id="scene-3" class="scene">
+        <div data-hf-id="hf-scjr" class="grid-lines"></div>
+        <div data-hf-id="hf-o0eg" class="scene-content">
+          <div data-hf-id="hf-quh6" class="copy">
+            <div data-hf-id="hf-2ibm" class="kicker enter">LIVE INTELLIGENCE</div>
+            <h2 data-hf-id="hf-dcnb" class="enter">市场新闻被编织成金融图谱。</h2>
+            <p data-hf-id="hf-o0bs" class="lede enter">系统读取真实资讯源，抽取资产、区域、实体和事件，让宏观风险以节点和关系呈现。</p>
+            <div data-hf-id="hf-hoyf" class="proof-row enter">
+              <div data-hf-id="hf-w05f" class="proof"><small data-hf-id="hf-larn">NEWS</small><strong data-hf-id="hf-zqno" class="count" data-value="377">377</strong></div>
+              <div data-hf-id="hf-wegg" class="proof"><small data-hf-id="hf-vgzt">NODES</small><strong data-hf-id="hf-pg66" class="count" data-value="1277">1277</strong></div>
+              <div data-hf-id="hf-tmb9" class="proof"><small data-hf-id="hf-871q">EDGES</small><strong data-hf-id="hf-t9xc" class="count" data-value="2761">2761</strong></div>
+            </div>
+          </div>
+          <figure data-hf-id="hf-1n4u" data-layout-allow-overflow="" class="screen-frame enter">
+            <img data-hf-id="hf-zllg" class="screen-img center" src="assets/captures/lab-01-initial-1920.png" alt="Live financial map">
+          </figure>
+        </div>
+        <div data-hf-id="hf-8cst" class="caption-band enter"><span data-hf-id="hf-nnr0">377 条资讯、1,277 个节点、2,761 条关系，成为可追踪的市场网络。</span><code data-hf-id="hf-4q4p">00:30</code></div>
+      </section>
+
+      <section data-hf-id="hf-8otf" data-layout-allow-overlap="" id="scene-4" class="scene">
+        <div data-hf-id="hf-squs" class="grid-lines"></div>
+        <div data-hf-id="hf-bngu" class="scene-content reverse">
+          <figure data-hf-id="hf-21fv" data-layout-allow-overflow="" class="screen-frame enter">
+            <img data-hf-id="hf-m65c" class="screen-img" src="assets/captures/lab-02-running-1920.png" alt="Submitted question and process stream">
+          </figure>
+          <div data-hf-id="hf-qg65" class="copy">
+            <div data-hf-id="hf-yx1r" class="kicker enter">CLICK SEND</div>
+            <h2 data-hf-id="hf-abxs" class="enter">点击发送，推演开始。</h2>
+            <p data-hf-id="hf-wx6i" class="lede enter">角色生成、证据读取、三轮讨论和交叉质询，不再藏在后端日志里，而是直接成为研究过程的一部分。</p>
+            <p data-hf-id="hf-w0zx" class="risk-note enter">画面中的过程流来自真实点击后的中间生成状态。</p>
+          </div>
+        </div>
+        <div data-hf-id="hf-8r3u" class="caption-band enter"><span data-hf-id="hf-sppc">这里展示的不是静态页面，而是提交后的生成过程。</span><code data-hf-id="hf-0dit">00:45</code></div>
+      </section>
+
+      <section data-hf-id="hf-4qpe" data-layout-allow-overlap="" id="scene-5" class="scene">
+        <div data-hf-id="hf-t55t" class="grid-lines"></div>
+        <div data-hf-id="hf-mthd" class="scene-content">
+          <div data-hf-id="hf-t8bc" class="copy">
+            <div data-hf-id="hf-i0vx" class="kicker enter">GRAPH EFFECTS</div>
+            <h2 data-hf-id="hf-ui9u" class="enter">节点和边，随着讨论主题闪烁。</h2>
+            <p data-hf-id="hf-rur0" class="lede enter">风险传导从一段解释，变成一张会响应的网络。研究员可以看到系统正在关注哪些资产、区域和事件。</p>
+            <div data-hf-id="hf-hane" class="proof-row enter">
+              <div data-hf-id="hf-u0ma" class="proof"><small data-hf-id="hf-fbax">PROCESS</small><strong data-hf-id="hf-e15z">三轮讨论</strong></div>
+              <div data-hf-id="hf-uexb" class="proof"><small data-hf-id="hf-lplp">VIEW</small><strong data-hf-id="hf-fll0">二维 / 三维</strong></div>
+            </div>
+          </div>
+          <div data-hf-id="hf-lm4q" class="split-screens enter">
+            <figure data-hf-id="hf-8iec" data-layout-allow-overflow="" class="screen-frame">
+              <img data-hf-id="hf-c370" class="screen-img center" src="assets/captures/lab-03-result-1920.png" alt="2D graph generation state">
+            </figure>
+            <figure data-hf-id="hf-s1y4" data-layout-allow-overflow="" class="screen-frame">
+              <img data-hf-id="hf-vpot" class="screen-img center" src="assets/captures/lab-02-running-1920.png" alt="3D graph effect state">
+            </figure>
+          </div>
+        </div>
+        <div data-hf-id="hf-aqmz" class="caption-band enter"><span data-hf-id="hf-8h06">特殊效果被放在画面中心：闪烁图谱、过程流、二维与三维视图。</span><code data-hf-id="hf-mpfb">01:00</code></div>
+      </section>
+
+      <section data-hf-id="hf-uwwd" data-layout-allow-overlap="" id="scene-6" class="scene light">
+        <div data-hf-id="hf-tjgu" class="grid-lines"></div>
+        <div data-hf-id="hf-c1rv" class="scene-content reverse">
+          <figure data-hf-id="hf-2fqw" data-layout-allow-overflow="" class="screen-frame enter">
+            <img data-hf-id="hf-bjio" class="screen-img" src="assets/captures/model-00-hero-1920.png" alt="PT synthetic data model overview">
+          </figure>
+          <div data-hf-id="hf-su0b" class="copy">
+            <div data-hf-id="hf-jzbm" class="kicker enter">SYNTHETIC MARKET DATA ENGINE</div>
+            <h2 data-hf-id="hf-t4lv" class="enter">第二层，是 PT 重尾合成数据。</h2>
+            <p data-hf-id="hf-fazo" class="lede enter">它不改变客户原策略，而是交付一层更重视极端行情的 OHLCV 数据底座。</p>
+            <div data-hf-id="hf-cud9" class="proof-row enter">
+              <div data-hf-id="hf-ut8c" class="proof"><small data-hf-id="hf-l2i9">FIELDS</small><strong data-hf-id="hf-ukyd">pt_ohlcv</strong></div>
+              <div data-hf-id="hf-s135" class="proof"><small data-hf-id="hf-770t">METHOD</small><strong data-hf-id="hf-tl8l">重尾先验</strong></div>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-b4y0" class="caption-band enter"><span data-hf-id="hf-mxl8">我们卖的不是单一策略，而是可接入现有流程的合成行情数据。</span><code data-hf-id="hf-jy8d">01:15</code></div>
+      </section>
+
+      <section data-hf-id="hf-u58k" data-layout-allow-overlap="" id="scene-7" class="scene light">
+        <div data-hf-id="hf-txrv" class="grid-lines"></div>
+        <div data-hf-id="hf-n7se" class="scene-content">
+          <div data-hf-id="hf-sfpa" class="copy">
+            <div data-hf-id="hf-hur4" class="kicker enter">MODEL PROOF</div>
+            <h2 data-hf-id="hf-4ocb" class="enter">四个市场，整体增强。</h2>
+            <p data-hf-id="hf-v9fw" class="lede enter">模型总览显示：4 个市场、16,944 个成功标的、163 组参数搜索；各市场平均收益改善均为正。</p>
+            <div data-hf-id="hf-johk" class="proof-row enter">
+              <div data-hf-id="hf-sfe6" class="proof"><small data-hf-id="hf-4aat">MARKETS</small><strong data-hf-id="hf-df2y">4</strong></div>
+              <div data-hf-id="hf-abo2" class="proof"><small data-hf-id="hf-sksr">STOCKS</small><strong data-hf-id="hf-lfza">16,944</strong></div>
+              <div data-hf-id="hf-9xd1" class="proof"><small data-hf-id="hf-9iis">GRID</small><strong data-hf-id="hf-4w1e">163</strong></div>
+            </div>
+          </div>
+          <div data-hf-id="hf-bdmb" class="market-grid enter">
+            <article data-hf-id="hf-w0rw" class="market-proof"><b data-hf-id="hf-ja47">A股</b><p data-hf-id="hf-77wg">年化改善 14.91%，夏普改善 0.329</p><strong data-hf-id="hf-bjwo">+52.89%</strong></article>
+            <article data-hf-id="hf-w7lw" class="market-proof"><b data-hf-id="hf-bfjk">美股</b><p data-hf-id="hf-m9fu">年化改善 25.73%，夏普改善 0.428</p><strong data-hf-id="hf-l3l7">+148.88%</strong></article>
+            <article data-hf-id="hf-v0ot" class="market-proof"><b data-hf-id="hf-jn9p">港股</b><p data-hf-id="hf-91no">年化改善 20.79%，回撤改善 11.12%</p><strong data-hf-id="hf-6e70">+152.75%</strong></article>
+            <article data-hf-id="hf-vezu" class="market-proof"><b data-hf-id="hf-cwtr">加密货币</b><p data-hf-id="hf-s2ml">年化改善 52.96%，回撤改善 11.26%</p><strong data-hf-id="hf-eukd">+671.76%</strong></article>
+          </div>
+        </div>
+        <div data-hf-id="hf-9y0x" class="caption-band enter"><span data-hf-id="hf-23s2">这里的提升来自模型页真实显示的市场级验证数据。</span><code data-hf-id="hf-kefw">01:30</code></div>
+      </section>
+
+      <section data-hf-id="hf-2fm7" data-layout-allow-overlap="" id="scene-8" class="scene">
+        <div data-hf-id="hf-uc2w" class="grid-lines"></div>
+        <div data-hf-id="hf-cg2w" class="scene-content reverse">
+          <div data-hf-id="hf-j4su" class="split-screens enter">
+            <figure data-hf-id="hf-qv11" data-layout-allow-overflow="" class="screen-frame">
+              <img data-hf-id="hf-trgc" class="screen-img left" src="assets/captures/strategy-01-initial-1920.png" alt="Strategy workbench before run">
+            </figure>
+            <figure data-hf-id="hf-r9c2" data-layout-allow-overflow="" class="screen-frame">
+              <img data-hf-id="hf-ucgt" class="screen-img left" src="assets/captures/strategy-02-loading-1920.png" alt="Strategy calculation loading state">
+            </figure>
+          </div>
+          <div data-hf-id="hf-s1e9" class="copy">
+            <div data-hf-id="hf-k911" class="kicker enter">RUN BACKTEST</div>
+            <h2 data-hf-id="hf-rjfw" class="enter">同一只股票，同一套策略。</h2>
+            <p data-hf-id="hf-ympq" class="lede enter">点击运行后，系统并排计算普通 5-20 均线和量子 5-20 均线，让提升效果可以直接对比。</p>
+          </div>
+        </div>
+        <div data-hf-id="hf-acby" class="caption-band enter"><span data-hf-id="hf-vz4i">策略页真实点击了“运行”，并抓取了计算中状态。</span><code data-hf-id="hf-1d1o">01:45</code></div>
+      </section>
+
+      <section data-hf-id="hf-yhi6" data-layout-allow-overlap="" id="scene-9" class="scene">
+        <div data-hf-id="hf-uqdx" class="grid-lines"></div>
+        <div data-hf-id="hf-m0vb" class="scene-content">
+          <div data-hf-id="hf-utjg" class="copy">
+            <div data-hf-id="hf-t3m5" class="kicker enter">RESULT: 688027.SS</div>
+            <h2 data-hf-id="hf-ej8j" class="enter">国盾量子，收益曲线被重新拉开。</h2>
+            <p data-hf-id="hf-u9hb" class="lede enter">普通 5-20 累计收益 275.08%；量子 5-20 达到 486.55%。</p>
+            <div data-hf-id="hf-d23w" class="compare-grid enter">
+              <article data-hf-id="hf-nr4x" class="compare-card"><b data-hf-id="hf-hph9">5-20 均线</b><p data-hf-id="hf-q4e0">累计收益率</p><strong data-hf-id="hf-qoct">275.08%</strong></article>
+              <article data-hf-id="hf-g7i2" class="compare-card quantum"><b data-hf-id="hf-jcli">量子 5-20</b><p data-hf-id="hf-lqxc">累计收益率</p><strong data-hf-id="hf-3xaf">486.55%</strong></article>
+            </div>
+          </div>
+          <figure data-hf-id="hf-znlp" data-layout-allow-overflow="" class="screen-frame enter">
+            <img data-hf-id="hf-bk3n" class="screen-img left" src="assets/captures/strategy-03-result-1920.png" alt="Strategy result cumulative return comparison">
+          </figure>
+        </div>
+        <div data-hf-id="hf-cbv3" class="caption-band enter"><span data-hf-id="hf-0iqa">合成数据路径让同一套策略的收益表现出现明显提升。</span><code data-hf-id="hf-xm48">02:00</code></div>
+      </section>
+
+      <section data-hf-id="hf-lape" data-layout-allow-overlap="" id="scene-10" class="scene">
+        <div data-hf-id="hf-v4oy" class="grid-lines"></div>
+        <div data-hf-id="hf-9nxp" class="scene-content reverse">
+          <figure data-hf-id="hf-01wq" data-layout-allow-overflow="" class="screen-frame enter">
+            <img data-hf-id="hf-tg2y" class="screen-img left" src="assets/captures/strategy-03-result-1920.png" alt="Strategy result Sharpe and drawdown comparison">
+          </figure>
+          <div data-hf-id="hf-uf8f" class="copy">
+            <div data-hf-id="hf-ou6c" class="kicker enter">RISK ADJUSTED</div>
+            <h2 data-hf-id="hf-2hq1" class="enter">不只看收益，也看风险质量。</h2>
+            <p data-hf-id="hf-oqxc" class="lede enter">夏普比率从 1.26 提升到 1.62；最大回撤从 -44.58% 收窄到 -31.01%。</p>
+            <div data-hf-id="hf-dimc" class="compare-grid enter">
+              <article data-hf-id="hf-eyid" class="compare-card"><b data-hf-id="hf-0y2u">Sharpe</b><p data-hf-id="hf-vz7z">1.26 到 1.62</p><strong data-hf-id="hf-qhcc">+0.36</strong></article>
+              <article data-hf-id="hf-12u6" class="compare-card quantum"><b data-hf-id="hf-i72n">Drawdown</b><p data-hf-id="hf-rxuv">-44.58% 到 -31.01%</p><strong data-hf-id="hf-jmas">改善 13.57%</strong></article>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-cq64" class="caption-band enter"><span data-hf-id="hf-94fs">提升效果同时体现在收益、夏普和回撤三个维度。</span><code data-hf-id="hf-x6uy">02:15</code></div>
+      </section>
+
+      <section data-hf-id="hf-erxr" data-layout-allow-overlap="" id="scene-11" class="scene light">
+        <div data-hf-id="hf-o7xa" class="grid-lines"></div>
+        <div data-hf-id="hf-mf6c" class="scene-content">
+          <div data-hf-id="hf-iccl" class="copy">
+            <div data-hf-id="hf-sxne" class="kicker enter">CLICK A STOCK</div>
+            <h2 data-hf-id="hf-xcze" class="enter">胜宏科技，单股验证闭环。</h2>
+            <p data-hf-id="hf-uyh2" class="lede enter">模型页点击股票后，页面直接运行单股回测。累计收益从 362.88% 到 1707.68%，夏普从 1.269 到 1.895。</p>
+            <div data-hf-id="hf-cbp9" class="compare-grid enter">
+              <article data-hf-id="hf-g5fg" class="compare-card"><b data-hf-id="hf-2mgs">原始路径</b><p data-hf-id="hf-kk09">累计收益率</p><strong data-hf-id="hf-lquy">362.88%</strong></article>
+              <article data-hf-id="hf-1h57" class="compare-card quantum"><b data-hf-id="hf-3sk0">PT 路径</b><p data-hf-id="hf-kyba">累计收益率</p><strong data-hf-id="hf-ph58">1707.68%</strong></article>
+            </div>
+          </div>
+          <figure data-hf-id="hf-0g7r" data-layout-allow-overflow="" class="screen-frame enter">
+            <img data-hf-id="hf-iy7e" class="screen-img left" src="assets/captures/model-03-stock-result-1920.png" alt="Single stock model result">
+          </figure>
+        </div>
+        <div data-hf-id="hf-qkks" class="caption-band enter"><span data-hf-id="hf-wepi">从总览表格点击到单股曲线，验证过程被完整展现。</span><code data-hf-id="hf-xroz">02:30</code></div>
+      </section>
+
+      <section data-hf-id="hf-gkxk" data-layout-allow-overlap="" id="scene-12" class="scene">
+        <div data-hf-id="hf-ntm9" class="grid-lines"></div>
+        <div data-hf-id="hf-a28q" class="scene-content reverse">
+          <div data-hf-id="hf-vcte" class="pipeline">
+            <div data-hf-id="hf-i1qd" class="pipe-step enter"><span data-hf-id="hf-p81i">01</span><div data-hf-id="hf-yeow"><b data-hf-id="hf-n5um">资讯有图谱</b><p data-hf-id="hf-madc">377 条新闻进入资产关系网络。</p></div></div>
+            <div data-hf-id="hf-p3tl" class="pipe-step enter"><span data-hf-id="hf-pmcj">02</span><div data-hf-id="hf-y7yw"><b data-hf-id="hf-u456">推演有过程</b><p data-hf-id="hf-z5ma">角色生成、三轮讨论、交叉质询可见。</p></div></div>
+            <div data-hf-id="hf-qaqo" class="pipe-step enter"><span data-hf-id="hf-q0nk">03</span><div data-hf-id="hf-x11t"><b data-hf-id="hf-o7sr">模型有验证</b><p data-hf-id="hf-lb0z">16,944 个成功标的支撑市场级证据。</p></div></div>
+            <div data-hf-id="hf-pwfn" class="pipe-step enter"><span data-hf-id="hf-n8id">04</span><div data-hf-id="hf-xfcu"><b data-hf-id="hf-ryon">策略有对照</b><p data-hf-id="hf-j28o">普通路径与 PT 路径并排回测。</p></div></div>
+          </div>
+          <div data-hf-id="hf-iqnm" class="copy">
+            <div data-hf-id="hf-egcw" class="brand-lockup enter"><div data-hf-id="hf-d6dv" class="brand-mark"></div><div data-hf-id="hf-55js" class="brand-name">FinTerra</div></div>
+            <h2 data-hf-id="hf-3u89" class="enter">让金融研究，从观点走向证据。</h2>
+            <p data-hf-id="hf-3v51" class="lede enter">访问本地演示，查看资讯推演、合成数据模型和策略回测工作台。</p>
+            <p data-hf-id="hf-2os9" class="risk-note enter">研究工具，不构成投资建议、交易指令或收益承诺。</p>
+          </div>
+        </div>
+        <div data-hf-id="hf-q69r" class="caption-band enter"><span data-hf-id="hf-kaem">FinTerra：资讯、模型、策略，一条可验证的研究链路。</span><code data-hf-id="hf-6dp1">03:00</code></div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      var tl = gsap.timeline({ paused: true });
+      var sceneDuration = 15;
+      var scenes = gsap.utils.toArray(".scene");
+
+      function addFromTo(selector, fromVars, toVars, at) {
+        var targets = gsap.utils.toArray(selector);
+        if (targets.length) {
+          tl.fromTo(targets, fromVars, toVars, at);
+        }
+      }
+
+      function addTo(selector, toVars, at) {
+        var targets = gsap.utils.toArray(selector);
+        if (targets.length) {
+          tl.to(targets, toVars, at);
+        }
+      }
+
+      scenes.forEach(function (scene, index) {
+        var start = index * sceneDuration;
+        var id = "#" + scene.id;
+        var direction = index % 2 === 0 ? 72 : -72;
+
+        tl.set(scene, { zIndex: index + 1 }, start);
+
+        if (index > 0) {
+          tl.set(scene, { opacity: 1, filter: "blur(18px)", x: direction }, start);
+          tl.to(scene, { filter: "blur(0px)", x: 0, duration: 0.82, ease: "power3.out" }, start);
+          tl.fromTo(scene, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "sine.out" }, start);
+          tl.set(scenes[index - 1], { opacity: 0 }, start + 0.84);
+        }
+
+        addFromTo(id + " .kicker", { opacity: 0, x: -42 }, { opacity: 1, x: 0, duration: 0.48, ease: "expo.out" }, start + 0.18);
+        addFromTo(id + " h1, " + id + " h2", { opacity: 0, y: 54 }, { opacity: 1, y: 0, duration: 0.72, ease: "power4.out" }, start + 0.34);
+        addFromTo(id + " .lede", { opacity: 0, x: 38 }, { opacity: 1, x: 0, duration: 0.58, ease: "power2.out" }, start + 0.66);
+        addFromTo(id + " .screen-frame", { opacity: 0, y: 46 }, { opacity: 1, y: 0, duration: 0.72, ease: "back.out(1.2)" }, start + 0.54);
+        addFromTo(id + " .pillar, " + id + " .proof, " + id + " .market-proof, " + id + " .compare-card, " + id + " .pipe-step", { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.52, stagger: 0.09, ease: "power3.out" }, start + 0.92);
+        addFromTo(id + " .caption-band", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, start + 1.18);
+        addTo(id + " .screen-img", { scale: 1.035, duration: sceneDuration - 1.2, ease: "sine.inOut" }, start + 0.72);
+
+        if (index === 2) {
+          tl.fromTo(id + " .count", { textContent: 0 }, { textContent: function (_, target) { return target.getAttribute("data-value"); }, duration: 1.4, snap: { textContent: 1 }, ease: "power1.out" }, start + 1.22);
+        }
+
+        if (index === 4) {
+          tl.to(id + " .screen-frame", { boxShadow: "0 0 70px rgba(82, 215, 247, 0.42)", duration: 1.05, repeat: 8, yoyo: true, ease: "sine.inOut" }, start + 1.2);
+        }
+
+        if (index === 8 || index === 10) {
+          tl.to(id + " .compare-card.quantum", { scale: 1.035, duration: 0.7, repeat: 6, yoyo: true, ease: "sine.inOut" }, start + 2.1);
+        }
+      });
+
+      tl.to("#scene-12", { opacity: 0, duration: 0.9, ease: "power2.in" }, 179.1);
+      tl.set("#scene-12", { opacity: 0, visibility: "hidden" }, 180);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

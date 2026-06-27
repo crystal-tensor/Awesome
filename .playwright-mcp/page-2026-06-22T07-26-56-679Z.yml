@@ -1,0 +1,137 @@
+- main [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e6]
+      - heading "市场数据" [level=1] [ref=e9]
+    - navigation [ref=e10]:
+      - button "单股回测" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+        - text: 单股回测
+      - button "模型训练" [ref=e16] [cursor=pointer]:
+        - img [ref=e17]
+        - text: 模型训练
+      - button "算法介绍" [active] [ref=e29] [cursor=pointer]:
+        - img [ref=e30]
+        - text: 算法介绍
+    - generic [ref=e69]:
+      - paragraph [ref=e70]: Algorithm
+      - heading "PT 重尾增强" [level=2] [ref=e71]
+      - code [ref=e72]: 不改变原策略
+    - generic [ref=e48]:
+      - strong [ref=e49]: 重要声明：
+      - list [ref=e50]:
+        - listitem [ref=e51]: 量子算法是研究工具，不是自动荐股工具
+        - listitem [ref=e52]: 不预测价格，不承诺收益，不保证风险控制
+        - listitem [ref=e53]: 所有回测结果仅供参考，不代表未来表现
+        - listitem [ref=e54]: 回测使用真实数据和量子算法计算的历史数据
+        - listitem [ref=e55]: 实盘前请自行验证策略并评估风险
+      - generic [ref=e56]:
+        - text: 联系方式：e-mail：
+        - link "wavefunction61@gmail.com" [ref=e57] [cursor=pointer]:
+          - /url: mailto:wavefunction61@gmail.com
+  - generic [ref=e73]:
+    - generic [ref=e74]:
+      - generic [ref=e75]:
+        - paragraph [ref=e76]: Quantum Distributional Prior
+        - heading "把量子重尾先验变成策略收益增强层" [level=2] [ref=e77]
+        - paragraph [ref=e78]: 我们的方法不是发明一个新的买卖策略，而是在不改变客户现有策略、算法或交易规则的情况下， 用量子随机线路采样背后的 Porter-Thomas 分布，为策略增加一层面向极端行情的分布工程。
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - img [ref=e81]
+            - text: 原策略可保留
+          - generic [ref=e84]:
+            - img [ref=e85]
+            - text: 收益和夏普可比较
+          - generic [ref=e88]:
+            - img [ref=e89]
+            - text: 可作为外接增强模块
+      - generic "量子算法流程图" [ref=e93]:
+        - generic [ref=e94]:
+          - img [ref=e95]
+          - strong [ref=e99]: RCS
+          - generic [ref=e100]: 量子随机线路
+        - generic [ref=e102]:
+          - img [ref=e103]
+          - strong [ref=e106]: PT Prior
+          - generic [ref=e107]: 重尾分布先验
+        - generic [ref=e109]:
+          - img [ref=e110]
+          - strong [ref=e114]: Strategy Replay
+          - generic [ref=e115]: 原策略重放
+    - generic [ref=e116]:
+      - article [ref=e117]:
+        - heading "论文基础" [level=3] [ref=e118]
+        - paragraph [ref=e119]: Random Circuit Sampling 的输出概率在混沌极限下服从 Porter-Thomas 分布，一种天然重尾、非均匀、可解析的量子随机先验。
+      - article [ref=e120]:
+        - heading "代码落地" [level=3] [ref=e121]
+        - paragraph [ref=e122]: stock1.py 不重写用户策略，而是并行运行经典路径与 PT 路径，把同一套买卖逻辑放到更懂尾部风险的价格路径上重放。
+      - article [ref=e123]:
+        - heading "投资价值" [level=3] [ref=e124]
+        - paragraph [ref=e125]: 对客户来说，它像一个策略增强层：保留原策略的可解释性，同时把注意力重新分配给少见但决定收益和回撤的市场状态。
+    - generic [ref=e126]:
+      - heading "一句话讲清楚" [level=3] [ref=e128]
+      - generic [ref=e129]:
+        - strong [ref=e130]: 传统策略像司机，PT 算法像一套重尾路况模拟器。
+        - paragraph [ref=e131]: 司机的驾驶习惯不变，但我们让它在更多“平时很少见、真正出事时很关键”的路况中重新演练。 到金融市场里，就是让原策略在真实历史价格之外，再经过一条由量子重尾先验塑形的路径， 从而检验并强化它在尾部行情中的买卖时机、收益曲线和回撤表现。
+    - generic [ref=e132]:
+      - heading "从论文到 stock1.py 的落地路径" [level=3] [ref=e134]
+      - generic [ref=e135]:
+        - article [ref=e136]:
+          - generic [ref=e137]: "1"
+          - generic [ref=e138]:
+            - heading "读取真实行情" [level=4] [ref=e139]
+            - paragraph [ref=e140]: 保留原始 OHLCV、收益率、20 日波动率，形成不被模型篡改的历史市场底座。
+        - article [ref=e141]:
+          - generic [ref=e142]: "2"
+          - generic [ref=e143]:
+            - heading "识别长尾状态" [level=4] [ref=e144]
+            - paragraph [ref=e145]: 按收益绝对值分桶为 H/M/L，把平常日、过渡日、极端日区分开。
+        - article [ref=e146]:
+          - generic [ref=e147]: "3"
+          - generic [ref=e148]:
+            - heading "注入 PT 先验" [level=4] [ref=e149]
+            - paragraph [ref=e150]: 用 Porter-Thomas 重尾随机性与 OT 映射改造中尾和尾部收益，不碰用户策略本身。
+        - article [ref=e151]:
+          - generic [ref=e152]: "4"
+          - generic [ref=e153]:
+            - heading "重放原策略" [level=4] [ref=e154]
+            - paragraph [ref=e155]: 5-20 均线只是示例，任何已有策略都可以作为黑盒接入，得到经典版与 PT 增强版对照。
+    - generic [ref=e156]:
+      - heading "为什么它适合做成产品" [level=3] [ref=e158]
+      - generic [ref=e159]:
+        - article [ref=e160]:
+          - heading "非侵入式" [level=4] [ref=e161]
+          - paragraph [ref=e162]: 客户不用交出策略源码，也不需要推翻原交易系统。我们只需要行情、信号接口或回测输出，就能做并行增强评估。
+        - article [ref=e163]:
+          - heading "可解释" [level=4] [ref=e164]
+          - paragraph [ref=e165]: 经典路径和 PT 路径同时展示，买入价、卖出价、收益率、夏普、最大回撤都能逐笔对照。
+        - article [ref=e166]:
+          - heading "面向尾部" [level=4] [ref=e167]
+          - paragraph [ref=e168]: 市场收益往往由少数极端区间决定。PT 分布天然给稀有事件更多概率质量，适合做黑天鹅压力增强。
+        - article [ref=e169]:
+          - heading "可扩展" [level=4] [ref=e170]
+          - paragraph [ref=e171]: 5-20 均线只是演示层。CTA、机器学习择时、组合调仓、风控止损，都可以接到同一套 PT 增强框架。
+    - generic [ref=e172]:
+      - heading "投资人应该记住的证据" [level=3] [ref=e174]
+      - generic [ref=e175]:
+        - article [ref=e176]:
+          - generic [ref=e177]: MT10 尾部成功率
+          - strong [ref=e178]: 52.9% -> 56.5%
+          - paragraph [ref=e179]: 论文实验：PT-rank 提升尾部任务表现，同时保持头部成功率。
+        - article [ref=e180]:
+          - generic [ref=e181]: 硬件退化
+          - strong [ref=e182]: 仅 3.2%
+          - paragraph [ref=e183]: 真实 Quafu/Baihua RCS 数据相对理想 PT 只出现小幅性能退化。
+        - article [ref=e184]:
+          - generic [ref=e185]: 推荐混合区间
+          - strong [ref=e186]: 0.3 - 0.7
+          - paragraph [ref=e187]: 论文敏感性分析显示，该区间更容易兼顾头部保持与尾部改善。
+        - article [ref=e188]:
+          - generic [ref=e189]: 单股示例
+          - strong [ref=e190]: 不改策略
+          - paragraph [ref=e191]: 回测页展示同一均线策略在经典路径与量子路径上的并行结果。
+    - generic [ref=e192]:
+      - generic [ref=e193]:
+        - paragraph [ref=e194]: Commercial Positioning
+        - heading "我们卖的不是“又一个策略”，而是策略的量子增强底座。" [level=3] [ref=e195]
+      - paragraph [ref=e196]: 现有量化机构最难接受的是替换已有系统。我们的切入点正相反：让客户继续使用自己的策略， 我们提供一层可插拔、可回测、可对照的 PT 重尾增强层。它的价值在于提高尾部行情下的暴露质量， 让原本已经可用的策略，在不改变交易思想的前提下，获得更高的收益弹性和更好的风险画像。

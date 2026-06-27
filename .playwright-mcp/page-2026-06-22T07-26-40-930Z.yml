@@ -1,0 +1,49 @@
+- main [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e6]
+      - heading "市场数据" [level=1] [ref=e9]
+    - navigation [ref=e10]:
+      - button "单股回测" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+        - text: 单股回测
+      - button "模型训练" [ref=e16] [cursor=pointer]:
+        - img [ref=e17]
+        - text: 模型训练
+      - button "算法介绍" [ref=e29] [cursor=pointer]:
+        - img [ref=e30]
+        - text: 算法介绍
+    - navigation
+    - generic [ref=e34]:
+      - paragraph [ref=e35]: Selected
+      - heading "-" [level=2] [ref=e36]
+      - code [ref=e37]: "-"
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: 开始
+          - textbox "开始" [ref=e41]: "20220101"
+        - generic [ref=e42]:
+          - generic [ref=e43]: 结束
+          - textbox "结束" [ref=e44]: "20260622"
+      - button "运行" [disabled] [ref=e45]:
+        - img [ref=e46]
+        - text: 运行
+    - generic [ref=e48]:
+      - strong [ref=e49]: 重要声明：
+      - list [ref=e50]:
+        - listitem [ref=e51]: 量子算法是研究工具，不是自动荐股工具
+        - listitem [ref=e52]: 不预测价格，不承诺收益，不保证风险控制
+        - listitem [ref=e53]: 所有回测结果仅供参考，不代表未来表现
+        - listitem [ref=e54]: 回测使用真实数据和量子算法计算的历史数据
+        - listitem [ref=e55]: 实盘前请自行验证策略并评估风险
+      - generic [ref=e56]:
+        - text: 联系方式：e-mail：
+        - link "wavefunction61@gmail.com" [ref=e57] [cursor=pointer]:
+          - /url: mailto:wavefunction61@gmail.com
+  - generic [ref=e58]:
+    - generic [ref=e60]:
+      - paragraph [ref=e61]: Backtest Workspace
+      - heading "等待运行回测" [level=2] [ref=e62]
+    - generic [ref=e63]:
+      - img [ref=e64]
+      - heading "选择市场和股票后运行回测" [level=2] [ref=e68]

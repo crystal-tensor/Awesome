@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FinTerra 模拟数据生成模型</title>
+    <style>
+      :root {
+        --bg: #05080d;
+        --panel: rgba(15, 23, 42, 0.76);
+        --panel-strong: rgba(18, 27, 45, 0.92);
+        --line: rgba(148, 163, 184, 0.18);
+        --text: #e5edf7;
+        --muted: #8da1b7;
+        --soft: #b9c8d8;
+        --cyan: #25d7f2;
+        --green: #39d39f;
+        --blue: #4f8cff;
+        --amber: #e7b95d;
+        --red: #ff6b74;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 18% 12%, rgba(37, 215, 242, 0.14), transparent 28%),
+          radial-gradient(circle at 88% 6%, rgba(57, 211, 159, 0.1), transparent 24%),
+          linear-gradient(180deg, #05080d 0%, #07101a 48%, #05080d 100%);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+        background-size: 56px 56px;
+        mask-image: linear-gradient(180deg, black, transparent 76%);
+        opacity: 0.8;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px clamp(18px, 4vw, 52px);
+        border-bottom: 1px solid var(--line);
+        background: rgba(5, 8, 13, 0.84);
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-mark {
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 35% 34%, #d9fff8 0 10%, transparent 11%),
+          conic-gradient(from 140deg, var(--cyan), var(--green), var(--blue), var(--cyan));
+        box-shadow: 0 0 24px rgba(37, 215, 242, 0.42);
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 22px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .nav-links a:hover {
+        color: var(--cyan);
+      }
+
+      .hero {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.02fr) minmax(380px, 0.98fr);
+        gap: clamp(28px, 5vw, 70px);
+        min-height: calc(100vh - 58px);
+        padding: clamp(64px, 9vw, 120px) clamp(18px, 4vw, 52px) 70px;
+        align-items: center;
+      }
+
+      .kicker {
+        margin: 0 0 18px;
+        color: var(--cyan);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 860px;
+        font-size: clamp(42px, 7vw, 84px);
+        line-height: 1.04;
+        letter-spacing: 0;
+      }
+
+      .gradient-text {
+        display: block;
+        color: transparent;
+        background: linear-gradient(110deg, #f7fbff 0%, var(--cyan) 36%, var(--green) 82%);
+        -webkit-background-clip: text;
+        background-clip: text;
+      }
+
+      .hero-lead {
+        max-width: 720px;
+        margin: 24px 0 0;
+        color: var(--soft);
+        font-size: clamp(16px, 2vw, 20px);
+        line-height: 1.78;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 34px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 22px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.04);
+        font-weight: 700;
+      }
+
+      .button.primary {
+        border-color: rgba(37, 215, 242, 0.38);
+        color: #031016;
+        background: linear-gradient(135deg, var(--cyan), var(--green));
+        box-shadow: 0 18px 46px rgba(37, 215, 242, 0.16);
+      }
+
+      .hero-note {
+        margin-top: 28px;
+        max-width: 720px;
+        padding: 14px 16px;
+        border: 1px solid rgba(231, 185, 93, 0.28);
+        border-radius: 8px;
+        color: #f5d58d;
+        background: rgba(231, 185, 93, 0.07);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .visual-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 540px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 8px;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(7, 13, 23, 0.92));
+        box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
+      }
+
+      .visual-card canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .visual-overlay {
+        position: absolute;
+        inset: auto 18px 18px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .metric-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .metric {
+        padding: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 8px;
+        background: rgba(5, 8, 13, 0.64);
+        backdrop-filter: blur(14px);
+      }
+
+      .metric small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 23px;
+      }
+
+      .visual-caption {
+        padding: 14px 16px;
+        border: 1px solid rgba(37, 215, 242, 0.22);
+        border-radius: 8px;
+        color: var(--soft);
+        background: rgba(8, 14, 24, 0.76);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .section {
+        padding: 88px clamp(18px, 4vw, 52px);
+      }
+
+      .section-inner {
+        width: min(1180px, 100%);
+        margin: 0 auto;
+      }
+
+      .section-head {
+        display: grid;
+        grid-template-columns: 0.85fr 1.15fr;
+        gap: 34px;
+        align-items: end;
+        margin-bottom: 34px;
+      }
+
+      .section h2 {
+        margin: 0;
+        font-size: clamp(30px, 4.2vw, 54px);
+        line-height: 1.16;
+      }
+
+      .section-desc {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.76;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+
+      .card {
+        min-height: 210px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .card.indexed {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card.indexed::after {
+        content: attr(data-index);
+        position: absolute;
+        right: 18px;
+        top: 12px;
+        color: rgba(255, 255, 255, 0.045);
+        font-size: 76px;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .card h3 {
+        position: relative;
+        z-index: 1;
+        margin: 0 0 12px;
+        font-size: 19px;
+      }
+
+      .card p {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.72;
+        font-size: 14px;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .pill {
+        border: 1px solid rgba(37, 215, 242, 0.24);
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: #bff5ff;
+        background: rgba(37, 215, 242, 0.06);
+        font-size: 12px;
+      }
+
+      .compare {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-strong);
+      }
+
+      .compare-row {
+        display: grid;
+        grid-template-columns: 1.1fr 0.95fr 0.95fr;
+        border-top: 1px solid var(--line);
+      }
+
+      .compare-row:first-child {
+        border-top: 0;
+        background: rgba(37, 215, 242, 0.07);
+      }
+
+      .compare-row > div {
+        padding: 18px;
+        border-left: 1px solid var(--line);
+        color: var(--soft);
+        line-height: 1.62;
+      }
+
+      .compare-row > div:first-child {
+        border-left: 0;
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .compare-row strong {
+        color: var(--green);
+      }
+
+      .process {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+
+      .step {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.66);
+      }
+
+      .step span {
+        display: inline-flex;
+        width: 30px;
+        height: 30px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: #031016;
+        background: var(--cyan);
+        font-weight: 900;
+      }
+
+      .step h3 {
+        margin: 16px 0 8px;
+        font-size: 17px;
+      }
+
+      .step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.66;
+      }
+
+      .compliance {
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(7, 16, 26, 0.95), rgba(8, 12, 20, 0.96));
+      }
+
+      .boundary-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .boundary {
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .boundary b {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .boundary span:first-child {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: #031016;
+        background: var(--green);
+        font-weight: 900;
+      }
+
+      .boundary p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.68;
+        font-size: 14px;
+      }
+
+      .cta {
+        text-align: center;
+        padding: 100px clamp(18px, 4vw, 52px);
+      }
+
+      .cta h2 {
+        margin: 0 auto 16px;
+        max-width: 820px;
+        font-size: clamp(30px, 5vw, 60px);
+        line-height: 1.12;
+      }
+
+      .cta p {
+        max-width: 760px;
+        margin: 0 auto 30px;
+        color: var(--muted);
+        line-height: 1.75;
+      }
+
+      footer {
+        padding: 28px clamp(18px, 4vw, 52px);
+        border-top: 1px solid var(--line);
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.7;
+      }
+
+      @media (max-width: 920px) {
+        .hero,
+        .section-head,
+        .grid-3,
+        .grid-2,
+        .process {
+          grid-template-columns: 1fr;
+        }
+
+        .visual-card {
+          min-height: 460px;
+        }
+
+        .nav-links {
+          display: none;
+        }
+
+        .compare-row {
+          grid-template-columns: 1fr;
+        }
+
+        .compare-row > div {
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav">
+      <a class="brand" href="#">
+        <span class="brand-mark"></span>
+        <span>FinTerra 数据模型</span>
+      </a>
+      <div class="nav-links">
+        <a href="#position">产品定位</a>
+        <a href="#effect">效果展示</a>
+        <a href="#flow">购买流程</a>
+        <a href="#compliance">合规边界</a>
+        <a href="index2.html">英文版</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <p class="kicker">合规的金融模拟数据生成模型</p>
+        <h1>
+          我们不销售交易结论
+          <span class="gradient-text">只提供模拟数据生成能力</span>
+        </h1>
+        <p class="hero-lead">
+          FinTerra 面向量化研究、策略压力测试和市场情景建模，生成可下载、可复现、可审计的模拟金融时间序列数据。
+          用户可以将生成数据用于自有研究流程；我们不代客交易，不管理资金，不提供买卖建议，也不承诺任何投资收益。
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#flow">申请模型试用</a>
+          <a class="button" href="#compliance">查看合规边界</a>
+        </div>
+        <div class="hero-note">
+          销售对象是“模型使用权与模拟数据生成服务”，不是策略、信号、收益率或投资顾问服务。所有示例结果仅用于说明数据生成能力与研究用途，不构成对真实市场收益的承诺。
+        </div>
+      </div>
+
+      <div class="visual-card" aria-label="模拟数据生成可视化">
+        <canvas id="marketCanvas"></canvas>
+        <div class="visual-overlay">
+          <div class="metric-strip">
+            <div class="metric">
+              <small>生成路径</small>
+              <strong>12,000</strong>
+            </div>
+            <div class="metric">
+              <small>情景标签</small>
+              <strong>48</strong>
+            </div>
+            <div class="metric">
+              <small>可复现实验</small>
+              <strong>100%</strong>
+            </div>
+          </div>
+          <div class="visual-caption">
+            图中展示的是模拟时间序列的形态差异：趋势、震荡、尾部冲击、波动聚集与 regime 切换。真实交易效果由用户自有策略、参数、成本假设和市场环境决定。
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="section" id="position">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="kicker">产品定位</p>
+            <h2>它不是交易机器人，而是模拟市场数据引擎</h2>
+          </div>
+          <p class="section-desc">
+            传统历史数据只有一条已经发生过的路径。FinTerra 生成的是一批具备统计结构、情景标签和可复现实验编号的模拟路径，让研究人员可以在更多市场形态下观察策略表现。
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card indexed" data-index="01">
+            <h3>生成模拟时间序列</h3>
+            <p>生成价格、收益率、波动率、成交量、跳空、趋势段、震荡段、流动性冲击等研究用数据字段，支持导出为表格或接入内部回测系统。</p>
+            <div class="pill-row">
+              <span class="pill">价格路径</span>
+              <span class="pill">收益率路径</span>
+              <span class="pill">波动率路径</span>
+            </div>
+          </article>
+          <article class="card indexed" data-index="02">
+            <h3>生成市场情景</h3>
+            <p>按用户设定生成牛市、熊市、高波动、低波动、黑天鹅、流动性收缩、趋势延续、均值回复等情景，用于研究扩展和压力测试。</p>
+            <div class="pill-row">
+              <span class="pill">情景标签</span>
+              <span class="pill">尾部冲击</span>
+              <span class="pill">状态切换</span>
+            </div>
+          </article>
+          <article class="card indexed" data-index="03">
+            <h3>提供可审计交付物</h3>
+            <p>每次生成都保存模型版本、参数、随机种子、数据字段说明和生成摘要，方便用户复现实验、归档研究过程和进行内部合规审查。</p>
+            <div class="pill-row">
+              <span class="pill">随机种子</span>
+              <span class="pill">参数记录</span>
+              <span class="pill">审计摘要</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="effect">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="kicker">效果展示</p>
+            <h2>同一套策略，不同数据环境下的研究样例</h2>
+          </div>
+          <p class="section-desc">
+            下表表达的是商业展示口径：固定一套用户自有量化策略，在历史样本与模型生成的模拟样本上分别运行，观察研究指标差异。它说明模拟数据可能提供更丰富、更适合研究的市场形态，不代表真实市场收益承诺。
+          </p>
+        </div>
+
+        <div class="compare">
+          <div class="compare-row">
+            <div>研究维度</div>
+            <div>真实历史数据样本</div>
+            <div>模型生成模拟数据样本</div>
+          </div>
+          <div class="compare-row">
+            <div>数据路径数量</div>
+            <div>受历史长度限制，通常只有一条已发生路径。</div>
+            <div><strong>可批量生成多路径</strong>，覆盖更多趋势、震荡和冲击组合。</div>
+          </div>
+          <div class="compare-row">
+            <div>策略研究效率</div>
+            <div>容易被单一历史区间、单一市场状态限制。</div>
+            <div><strong>可快速扩展样本</strong>，用于筛查策略对不同情景的敏感性。</div>
+          </div>
+          <div class="compare-row">
+            <div>结果表达边界</div>
+            <div>历史回测不等于未来收益。</div>
+            <div><strong>模拟回测也不等于未来收益</strong>，仅作为研究数据与压力测试材料。</div>
+          </div>
+          <div class="compare-row">
+            <div>用户购买内容</div>
+            <div>购买或授权历史数据。</div>
+            <div><strong>购买模型使用权</strong>，按需求生成模拟数据与审计文件。</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="flow">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="kicker">商业流程</p>
+            <h2>你买的是生成能力，不是交易效果</h2>
+          </div>
+          <p class="section-desc">
+            用户提交数据生成需求，平台返回模拟数据包。用户如何研究、如何测试、是否用于内部策略流程，由用户自行决定并自行承担责任。
+          </p>
+        </div>
+
+        <div class="process">
+          <div class="step">
+            <span>1</span>
+            <h3>定义需求</h3>
+            <p>选择资产类型、时间长度、频率、波动区间、市场状态、尾部冲击强度和输出字段。</p>
+          </div>
+          <div class="step">
+            <span>2</span>
+            <h3>生成数据</h3>
+            <p>模型生成多组模拟金融时间序列，并输出随机种子、参数和数据说明。</p>
+          </div>
+          <div class="step">
+            <span>3</span>
+            <h3>交付验收</h3>
+            <p>用户下载数据包，检查字段、质量、覆盖情景和可复现性，确认后计费。</p>
+          </div>
+          <div class="step">
+            <span>4</span>
+            <h3>用户自用</h3>
+            <p>数据可进入用户自有研究、压力测试、教学、模型训练或内部实验流程。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section compliance" id="compliance">
+      <div class="section-inner">
+        <div class="section-head">
+          <div>
+            <p class="kicker">合规边界</p>
+            <h2>把话说清楚，产品才能卖得久</h2>
+          </div>
+          <p class="section-desc">
+            FinTerra 的对外表述坚持“生成模拟数据”这一边界。展示策略研究效果时，必须同时展示假设条件、数据性质、使用限制和风险提示。
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <div class="boundary-list">
+            <div class="boundary">
+              <span>可</span>
+              <div>
+                <b>可以销售模型使用权</b>
+                <p>销售模型调用额度、数据生成服务、模拟数据包、参数配置和审计文件。</p>
+              </div>
+            </div>
+            <div class="boundary">
+              <span>可</span>
+              <div>
+                <b>可以展示研究样例</b>
+                <p>可以展示“同一策略在模拟样本中的研究表现”，但必须标注样例条件和非收益承诺。</p>
+              </div>
+            </div>
+            <div class="boundary">
+              <span>可</span>
+              <div>
+                <b>可以服务机构研究流程</b>
+                <p>用于量化研究、数据增强、压力测试、教学演示、模型训练和内部风控研究。</p>
+              </div>
+            </div>
+          </div>
+          <div class="boundary-list">
+            <div class="boundary">
+              <span>不</span>
+              <div>
+                <b>不承诺投资收益</b>
+                <p>不宣传模型能提高真实交易收益，不承诺胜率、收益率、夏普或回撤改善。</p>
+              </div>
+            </div>
+            <div class="boundary">
+              <span>不</span>
+              <div>
+                <b>不提供交易建议</b>
+                <p>不提供买入、卖出、持有、仓位、标的推荐或任何形式的投资顾问服务。</p>
+              </div>
+            </div>
+            <div class="boundary">
+              <span>不</span>
+              <div>
+                <b>不管理客户资金</b>
+                <p>不代客理财、不自动下单、不连接用户交易账户，不承担用户后续使用行为。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <h2>让你的研究拥有更多市场路径</h2>
+      <p>
+        FinTerra 只负责生成模拟数据和可审计交付物。你可以用它扩展样本、测试策略、训练模型、做压力测试；最终如何使用，由你自己的研究框架决定。
+      </p>
+      <div class="hero-actions" style="justify-content: center;">
+        <a class="button primary" href="mailto:contact@finterra.ai">申请商务沟通</a>
+        <a class="button" href="index2.html">查看英文版</a>
+      </div>
+    </section>
+
+    <footer>
+      FinTerra 模拟数据生成模型仅提供研究用数据生成工具与模拟数据交付物，不构成投资建议、交易建议、收益承诺或资产管理服务。用户应根据自身合规要求、风险承受能力和研究目的独立判断。
+    </footer>
+
+    <script>
+      const canvas = document.getElementById("marketCanvas");
+      const ctx = canvas.getContext("2d");
+      let width = 0;
+      let height = 0;
+      const paths = Array.from({ length: 26 }, (_, index) => ({
+        phase: Math.random() * Math.PI * 2,
+        drift: 0.18 + Math.random() * 0.5,
+        amp: 18 + Math.random() * 64,
+        tone: index % 3
+      }));
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        width = Math.floor(rect.width * window.devicePixelRatio);
+        height = Math.floor(rect.height * window.devicePixelRatio);
+        canvas.width = width;
+        canvas.height = height;
+        ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+        width = rect.width;
+        height = rect.height;
+      }
+
+      function draw(t) {
+        ctx.clearRect(0, 0, width, height);
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, "rgba(37, 215, 242, 0.06)");
+        gradient.addColorStop(1, "rgba(57, 211, 159, 0.04)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.08)";
+        ctx.lineWidth = 1;
+        for (let x = 0; x < width; x += 48) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+        for (let y = 0; y < height; y += 48) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+
+        paths.forEach((path, index) => {
+          const mid = height * (0.28 + (index / paths.length) * 0.48);
+          ctx.beginPath();
+          for (let x = 0; x <= width; x += 8) {
+            const n = x / width;
+            const shock = Math.sin(n * Math.PI * 6 + path.phase + t * 0.0007) * path.amp * 0.22;
+            const wave = Math.sin(n * Math.PI * (2.8 + path.drift) + path.phase + t * 0.00035) * path.amp;
+            const tail = Math.max(0, Math.sin(n * Math.PI * 3 + t * 0.00025 + index)) ** 8 * path.amp * 1.35;
+            const y = mid + wave + shock - tail;
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          const colors = ["rgba(37,215,242,0.42)", "rgba(57,211,159,0.38)", "rgba(79,140,255,0.34)"];
+          ctx.strokeStyle = colors[path.tone];
+          ctx.lineWidth = index % 5 === 0 ? 1.6 : 0.9;
+          ctx.stroke();
+        });
+
+        ctx.fillStyle = "rgba(231,185,93,0.9)";
+        for (let i = 0; i < 18; i += 1) {
+          const x = (Math.sin(t * 0.0002 + i * 1.7) * 0.5 + 0.5) * width;
+          const y = (Math.cos(t * 0.00023 + i * 1.13) * 0.5 + 0.5) * height * 0.66 + 30;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener("resize", resize);
+      resize();
+      requestAnimationFrame(draw);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+[h1] 全球金融资讯推演实验室
+[p] 从 news 目录读取真实资讯，构建金融图谱，再用 MiroFish 式多对象推演回答你的问题。
+[stat] news 目录 377
+[stat] 图谱节点 1277
+[stat] 图谱关系 2761
+[process] 读取 news 目录与 RSS 快照，筛选当前勾选的资讯主题。
+[process] 抽取资产、区域、实体和事件，重新编织金融图谱。
+[process] 根据当前金融图谱生成讨论角色，并提交给 MiroFish LLMClient。
+[process] 第1轮准备：各角色读取证据并提出初始判断。
+[process] 第2轮准备：角色交叉质询资产、区域和流动性传导。
+[process] 第3轮准备：角色收敛分歧，形成最终结论。
+[h1] PT 重尾合成数据模型
+[stat] 覆盖市场 4 个
+[stat] 成功标的 16,944
+[stat] 参数网格 163 组
+[market] A股 收益改善 52.89% 年化改善 14.91% 夏普改善 0.329 回撤改善 6.58%
+[market] 美股 收益改善 148.88% 年化改善 25.73% 夏普改善 0.428 回撤改善 7.86%
+[market] 港股 收益改善 152.75% 年化改善 20.79% 夏普改善 0.392 回撤改善 11.12%
+[market] 加密货币 收益改善 671.76% 年化改善 52.96% 夏普改善 0.428 回撤改善 11.26%
+[backtest] 国盾量子 classic cumulative 275.08% quantum cumulative 486.55%
+[backtest] 国盾量子 classic Sharpe 1.26 quantum Sharpe 1.62
+[backtest] 国盾量子 classic max drawdown -44.58% quantum max drawdown -31.01%
+[stock] 胜宏科技 table baseline cumulative 429.30% PT cumulative 1869.80% improvement 1440.50%
+[stock] 胜宏科技 single backtest baseline cumulative 362.88% PT cumulative 1707.68%
+[stock] 胜宏科技 single backtest Sharpe 1.269 to 1.895, max drawdown -46.56% to -37.92%

@@ -5,13 +5,18 @@ import io
 import json
 import logging
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
+import requests
 import yfinance as yf
-from scipy.stats import beta, expon
+
+from classic_strategy import compute_classic_strategy
+from pt_data_transformer import split_long_tail_bucket
+from pt_strategy import compute_pt_strategy
 
 # 忽略 matplotlib 的字体警告
 warnings.filterlogging = logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
@@ -21,108 +26,104 @@ warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 plt.rcParams["font.family"] = ["Arial Unicode MS", "PingFang SC", "Heiti SC", "sans-serif"]
 plt.rcParams["axes.unicode_minus"] = False
 
-
-# ===================== 2. 核心工具函数（论文PT框架实现） =====================
-def generate_pt_sample(n: int) -> np.ndarray:
-    """生成 Porter-Thomas 分布样本 (Exp(1) 标准指数分布)。"""
-    return expon.rvs(size=n, random_state=42)
-
-
-def pt_rank_weight(return_series: np.ndarray, vol_series: np.ndarray, eta: float = 0.5) -> np.ndarray:
-    """PT-Rank 排序最优匹配权重。"""
-    n = len(return_series)
-    tau = np.abs(return_series) + vol_series
-    pt_y = generate_pt_sample(n)
-    pt_weight = pt_y / pt_y.sum()
-
-    idx_tau_desc = np.argsort(-tau)
-    idx_pt_desc = np.argsort(-pt_weight)
-
-    matched_weight = np.zeros(n)
-    matched_weight[idx_tau_desc] = pt_weight[idx_pt_desc]
-
-    uniform_w = np.ones(n) / n
-    final_weight = (1 - eta) * uniform_w + eta * matched_weight
-    return final_weight
-
-
-def pt_ot_perturb(original_ret: np.ndarray, pt_y: np.ndarray) -> np.ndarray:
-    """PT + 最优传输OT 生成长尾行情扰动。"""
-    cdf_pt = expon.cdf(pt_y)
-    xi = 0.85 * beta.ppf(cdf_pt, 2, 12) + 0.15 * beta.ppf(cdf_pt, 8, 2)
-    new_ret = original_ret * (1 + xi * np.sign(original_ret))
-    return new_ret
-
-
-def split_long_tail_bucket(df: pd.DataFrame, q_head=0.8, q_tail=0.95) -> pd.DataFrame:
-    """数据头尾分桶：头部(常态)、中部、尾部(极端长尾)。"""
-    ret_abs = df["daily_ret_abs"]
-    h_thres = ret_abs.quantile(q_head)
-    l_thres = ret_abs.quantile(q_tail)
-
-    def label_bucket(x):
-        if x <= h_thres:
-            return "H"
-        if x <= l_thres:
-            return "M"
-        return "L"
-
-    df["bucket"] = ret_abs.apply(label_bucket)
-    return df
+PROJECT_DIR = Path(__file__).resolve().parent
+DATA_DIR = PROJECT_DIR / "data"
+SELECTED_MARKET_STOCKS_PATH = PROJECT_DIR / ".tmp" / "selected-market-stocks.json"
+LATEST_MODEL_PATH = PROJECT_DIR / ".tmp" / "latest-training-model.json"
+STRATEGY_MODEL_DIR = PROJECT_DIR / "strategy"
 
 
 # ===================== 3. 数据获取与预处理 =====================
+def normalize_tencent_a_share_symbol(stock_code: str) -> str:
+    code = stock_code.upper().replace(".SS", "").replace(".SZ", "").replace(".BJ", "")
+    if stock_code.upper().endswith(".BJ") or code.startswith(("4", "8", "920")):
+        prefix = "bj"
+    else:
+        prefix = "sh" if stock_code.upper().endswith(".SS") or code.startswith(("6", "9")) else "sz"
+    return f"{prefix}{code}"
+
+
+def normalize_tencent_hk_symbol(stock_code: str) -> str:
+    return f"hk{stock_code.upper().replace('.HK', '').zfill(5)}"
+
+
+def tencent_date(value: str) -> str:
+    return pd.to_datetime(value).strftime("%Y-%m-%d")
+
+
+def tencent_kline_count(start_date: str, end_date: str) -> int:
+    days = max(1, (pd.to_datetime(end_date) - pd.to_datetime(start_date)).days + 1)
+    return min(2000, max(10, days * 2))
+
+
+def normalize_tencent_symbols(stock_code: str) -> list[str]:
+    """把常见市场代码转换成腾讯历史 K 线代码。"""
+    code = stock_code.strip().upper()
+    if code.endswith("-USD"):
+        raise RuntimeError(f"当前只允许腾讯源，但暂未配置加密货币腾讯历史 K 线接口: {stock_code}")
+    if code.endswith(".SS") or code.endswith(".SZ") or code.endswith(".BJ") or (code.isdigit() and len(code) == 6):
+        return [normalize_tencent_a_share_symbol(code)]
+    if code.endswith(".HK") or (code.isdigit() and len(code) <= 5):
+        return [normalize_tencent_hk_symbol(code)]
+    if code.startswith("US"):
+        code = code[2:]
+    ticker = code.replace("-", ".")
+    if ticker.endswith((".OQ", ".N", ".A")):
+        return [f"us{ticker}"]
+    return [f"us{ticker}.OQ", f"us{ticker}.N", f"us{ticker}.A"]
+
+
 def normalize_yahoo_symbol(stock_code: str) -> str:
     """把常见 A股/港股/美股/加密货币代码转换成 Yahoo Finance 代码。"""
     code = stock_code.strip().upper()
+    if code.startswith(("SH", "SZ", "BJ")) and code[2:].isdigit():
+        suffix = ".SS" if code.startswith("SH") else ".SZ"
+        return f"{code[2:]}{suffix}"
     if "." in code or "-" in code or code.endswith("=F") or code.endswith("=X"):
         return code
     if code.isdigit() and len(code) == 6:
-        return f"{code}.SS" if code.startswith("6") else f"{code}.SZ"
+        return f"{code}.SS" if code.startswith(("6", "9")) else f"{code}.SZ"
     if code.isdigit() and len(code) <= 5:
         return f"{code.zfill(4)}.HK"
     return code
 
 
-def get_stock_data(stock_code: str, start_date: str, end_date: str) -> pd.DataFrame:
-    """通过 Yahoo Finance 获取日线数据。"""
+def identify_market_and_symbol(stock_code: str) -> tuple[str, str]:
+    code = stock_code.strip().upper()
+    if code.startswith(("SH", "SZ", "BJ")) and code[2:].isdigit():
+        suffix = ".SS" if code.startswith("SH") else ".SZ" if code.startswith("SZ") else ".BJ"
+        return "A股", f"{code[2:]}{suffix}"
+    if code.endswith((".SS", ".SZ", ".BJ")):
+        return "A股", code
+    if code.isdigit() and len(code) == 6:
+        suffix = ".BJ" if code.startswith(("4", "8", "920")) else ".SS" if code.startswith(("6", "9")) else ".SZ"
+        return "A股", f"{code}{suffix}"
+    if code.endswith(".HK"):
+        return "港股", f"{code.replace('.HK', '').zfill(4)}.HK"
+    if code.isdigit() and len(code) <= 5:
+        return "港股", f"{code.zfill(4)}.HK"
+    if code.endswith("-USD"):
+        return "加密货币", code
+    return "美股", code.replace(".OQ", "").replace(".N", "").replace(".A", "")
 
-    start = pd.to_datetime(start_date).strftime("%Y-%m-%d")
-    # yfinance 的 end 为开区间，这里加 1 天以包含传入的结束日期
-    end = (pd.to_datetime(end_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
 
-    ticker = normalize_yahoo_symbol(stock_code)
-    df = yf.download(
-        ticker,
-        start=start,
-        end=end,
-        auto_adjust=True,
-        progress=False,
-        timeout=30,
-    )
-    if df.empty:
-        raise RuntimeError(f"Yahoo Finance 未返回数据，请检查股票代码或日期区间: {ticker}")
+def data_csv_path(symbol: str, market: str) -> Path:
+    safe_market = market.replace("/", "_").replace("\\", "_").replace(":", "_")
+    safe_symbol = symbol.replace("/", "_").replace("\\", "_").replace(":", "_")
+    return DATA_DIR / f"{safe_market}_{safe_symbol}.csv"
 
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
 
-    df = df.rename(
-        columns={
-            "Open": "open",
-            "High": "high",
-            "Low": "low",
-            "Close": "close",
-            "Volume": "volume",
-        }
-    )
+def prepare_price_frame(df: pd.DataFrame) -> pd.DataFrame:
     required_columns = ["open", "high", "low", "close", "volume"]
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
-        raise RuntimeError(f"Yahoo Finance 数据缺少字段: {', '.join(missing_columns)}")
+        raise RuntimeError(f"行情数据缺少字段: {', '.join(missing_columns)}")
 
     df = df[required_columns].copy()
     df.index = pd.to_datetime(df.index)
     df.index.name = "date"
+    for column in required_columns:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
 
     df["daily_ret"] = df["close"].pct_change()
     df["daily_ret_abs"] = df["daily_ret"].abs()
@@ -133,172 +134,223 @@ def get_stock_data(stock_code: str, start_date: str, end_date: str) -> pd.DataFr
     return df
 
 
-# ===================== 4. 回测核心逻辑 =====================
-def calc_backtest_metrics(net_series: pd.Series, ret_series: pd.Series) -> dict:
-    """计算回测核心指标：累计收益、年化收益、最大回撤、胜率、夏普比率。"""
-    total_ret = net_series.iloc[-1] - 1
-    days = len(net_series)
-    annual_ret = (1 + total_ret) ** (252 / days) - 1
-
-    rolling_max = net_series.cummax()
-    drawdown = (net_series - rolling_max) / rolling_max
-    max_dd = drawdown.min()
-
-    win_rate = (ret_series > 0).sum() / len(ret_series)
-
-    daily_mean = ret_series.mean()
-    daily_std = ret_series.std()
-    sharpe = (daily_mean / daily_std) * np.sqrt(252) if daily_std > 0 else 0
-
-    return {
-        "累计收益率": round(float(total_ret), 4),
-        "年化收益率": round(float(annual_ret), 4),
-        "最大回撤": round(float(max_dd), 4),
-        "胜率": round(float(win_rate), 4),
-        "夏普比率": round(float(sharpe), 4),
-    }
+def load_local_tencent_stock_data(stock_code: str, start_date: str, end_date: str, stale_days: int = 3) -> pd.DataFrame | None:
+    market, symbol = identify_market_and_symbol(stock_code)
+    path = data_csv_path(symbol, market)
+    if not path.exists():
+        return None
+    raw = pd.read_csv(path)
+    if "date" not in raw.columns:
+        return None
+    last_date = pd.to_datetime(raw["date"], errors="coerce").max()
+    requested_end = pd.to_datetime(end_date)
+    if pd.isna(last_date) or last_date < requested_end - pd.Timedelta(days=stale_days):
+        return None
+    raw["date"] = pd.to_datetime(raw["date"])
+    raw = raw[(raw["date"] >= pd.to_datetime(start_date)) & (raw["date"] <= requested_end)]
+    if raw.empty:
+        return None
+    raw = raw.set_index("date").sort_index()
+    return prepare_price_frame(raw)
 
 
-def build_strategy(df: pd.DataFrame, prefix: str, open_col: str, high_col: str, low_col: str, close_col: str, ret_col: str, real_close_col: str, real_ret_col: str) -> dict:
-    """基于指定价格路径独立生成均线信号、买卖点、收益曲线和交易明细。"""
-    ma5_col = f"{prefix}_ma5"
-    ma20_col = f"{prefix}_ma20"
-    signal_col = f"{prefix}_signal"
-    signal_shift_col = f"{prefix}_signal_shift"
-    action_col = f"{prefix}_trade_action"
-    strategy_ret_col = f"{prefix}_strategy_ret"
-    net_col = f"{prefix}_net"
+def get_yahoo_stock_data(stock_code: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """通过 Yahoo Finance 获取复权日线数据，保持旧版主回测口径。"""
+    start = pd.to_datetime(start_date).strftime("%Y-%m-%d")
+    end = (pd.to_datetime(end_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    ticker = normalize_yahoo_symbol(stock_code)
+    df = yf.download(ticker, start=start, end=end, auto_adjust=True, progress=False, timeout=30)
+    if df.empty:
+        raise RuntimeError(f"Yahoo Finance 未返回数据，请检查股票代码或日期区间: {ticker}")
 
-    df[ma5_col] = df[close_col].rolling(5).mean()
-    df[ma20_col] = df[close_col].rolling(20).mean()
-    df[signal_col] = np.where(df[ma5_col] > df[ma20_col], 1, 0)
-    df[signal_shift_col] = df[signal_col].shift(1).fillna(0)
-    df[action_col] = df[signal_col].diff()
-
-    trades = []
-    buy_price = 0
-    real_buy_price = 0
-    buy_date = None
-    for date, row in df.iterrows():
-        if row[action_col] == 1:
-            buy_price = row[close_col]
-            real_buy_price = row[real_close_col]
-            buy_date = date
-        elif row[action_col] == -1 and buy_price > 0:
-            sell_price = row[close_col]
-            real_sell_price = row[real_close_col]
-            abs_ret = real_sell_price - real_buy_price
-            trade_ret = abs_ret / real_buy_price
-
-            trade_data = {
-                "买入日期": buy_date.strftime("%Y-%m-%d"),
-                "卖出日期": date.strftime("%Y-%m-%d"),
-            }
-            if prefix == "pt":
-                trade_data["量子算法买入价"] = round(float(buy_price), 2)
-                trade_data["量子算法卖出价"] = round(float(sell_price), 2)
-
-            trade_data["买入价"] = round(float(real_buy_price), 2)
-            trade_data["卖出价"] = round(float(real_sell_price), 2)
-            trade_data["绝对收益"] = round(float(abs_ret), 2)
-            trade_data["收益率"] = round(float(trade_ret), 6)
-
-            trades.append(trade_data)
-            buy_price = 0
-            real_buy_price = 0
-
-    df[strategy_ret_col] = df[signal_shift_col] * df[real_ret_col]
-    df[net_col] = (1 + df[strategy_ret_col]).cumprod()
-
-    buy_points = []
-    sell_points = []
-    for date, row in df.iterrows():
-        point = {"date": date.strftime("%Y-%m-%d"), "price": round(float(row[close_col]), 4)}
-        if row[action_col] == 1:
-            buy_points.append(point)
-        elif row[action_col] == -1:
-            sell_points.append(point)
-
-    return {
-        "columns": {
-            "open": open_col,
-            "high": high_col,
-            "low": low_col,
-            "close": close_col,
-            "ma5": ma5_col,
-            "ma20": ma20_col,
-            "net": net_col,
-        },
-        "metrics": calc_backtest_metrics(df[net_col], df[strategy_ret_col]),
-        "trades": trades,
-        "buyPoints": buy_points,
-        "sellPoints": sell_points,
-    }
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    df = df.rename(
+        columns={
+            "Open": "open",
+            "High": "high",
+            "Low": "low",
+            "Close": "close",
+            "Volume": "volume",
+        }
+    )
+    return prepare_price_frame(df)
 
 
-def clean_numeric_list(series: pd.Series, digits: int = 4) -> list:
-    """把 Pandas 数列转换成 JSON 友好的数字/空值列表。"""
-    values = []
-    for value in series:
-        values.append(None if pd.isna(value) else round(float(value), digits))
-    return values
+def get_tencent_stock_data(stock_code: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """通过腾讯历史 K 线接口获取日线数据，作为 Yahoo 不可用时的兜底。"""
+    last_error = None
+    tencent_urls = [
+        "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get",
+        "https://ifzq.gtimg.cn/appstock/app/fqkline/get",
+        "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/fqkline/get",
+    ]
+    for tencent_symbol in normalize_tencent_symbols(stock_code):
+        adjust = "" if tencent_symbol.startswith("us") else "qfq"
+        params = {
+            "param": (
+                f"{tencent_symbol},day,{tencent_date(start_date)},"
+                f"{tencent_date(end_date)},{tencent_kline_count(start_date, end_date)},{adjust}"
+            )
+        }
+        for url in tencent_urls:
+            try:
+                response = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+                response.raise_for_status()
+                payload = response.json()
+                payload_data = payload.get("data", {})
+                data = payload_data.get(tencent_symbol, {}) if isinstance(payload_data, dict) else {}
+                rows = data.get("qfqday") or data.get("day") or []
+                if not rows:
+                    last_error = f"{tencent_symbol} 未返回历史 K 线"
+                    continue
+
+                df = pd.DataFrame([row[:6] for row in rows], columns=["date", "open", "close", "high", "low", "volume"])
+                df["date"] = pd.to_datetime(df["date"])
+                df = df.set_index("date").sort_index()
+                return prepare_price_frame(df)
+            except Exception as error:
+                last_error = error
+    detail = f": {last_error}" if last_error else ""
+    raise RuntimeError(f"腾讯源未返回数据，请检查股票代码或日期区间: {stock_code}{detail}")
 
 
-def build_chart_series(chart_df: pd.DataFrame, strategy: dict) -> dict:
-    cols = strategy["columns"]
-    return {
-        "kline": chart_df[[cols["open"], cols["close"], cols["low"], cols["high"]]].round(4).values.tolist(),
-        "close": clean_numeric_list(chart_df[cols["close"]], 4),
-        "ma5": clean_numeric_list(chart_df[cols["ma5"]], 4),
-        "ma20": clean_numeric_list(chart_df[cols["ma20"]], 4),
-        "buyPoints": strategy["buyPoints"],
-        "sellPoints": strategy["sellPoints"],
-    }
+def get_stock_data(stock_code: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """主回测优先使用本地腾讯 CSV，其次腾讯接口，最后 Yahoo 兜底。"""
+    local_df = load_local_tencent_stock_data(stock_code, start_date, end_date)
+    if local_df is not None:
+        return local_df
+
+    try:
+        return get_tencent_stock_data(stock_code, start_date, end_date)
+    except Exception as tencent_error:
+        local_fallback = None
+        try:
+            market, symbol = identify_market_and_symbol(stock_code)
+            path = data_csv_path(symbol, market)
+            if path.exists():
+                raw = pd.read_csv(path)
+                raw["date"] = pd.to_datetime(raw["date"])
+                raw = raw[(raw["date"] >= pd.to_datetime(start_date)) & (raw["date"] <= pd.to_datetime(end_date))]
+                if not raw.empty:
+                    local_fallback = prepare_price_frame(raw.set_index("date").sort_index())
+        except Exception:
+            local_fallback = None
+        if local_fallback is not None:
+            return local_fallback
+        try:
+            return get_yahoo_stock_data(stock_code, start_date, end_date)
+        except Exception as yahoo_error:
+            raise RuntimeError(f"腾讯和 Yahoo 源都未返回可用数据: 腾讯={tencent_error}; Yahoo={yahoo_error}") from yahoo_error
 
 
+def load_model_params_for_symbol(stock_code: str, eta_param: float) -> dict:
+    market, symbol = identify_market_and_symbol(stock_code)
+
+    if SELECTED_MARKET_STOCKS_PATH.exists():
+        try:
+            selected = json.loads(SELECTED_MARKET_STOCKS_PATH.read_text(encoding="utf-8"))
+            for row in selected.get("markets", {}).get(market, {}).get("stocks", []):
+                if str(row.get("symbol", "")).upper() == symbol.upper() and row.get("params"):
+                    params = dict(row["params"])
+                    params.update({"modelSource": "selected_market_stock", "modelMarket": market, "modelSymbol": symbol})
+                    return params
+        except Exception:
+            pass
+
+    latest_alpha_model_path = STRATEGY_MODEL_DIR / market / "latest_alpha_model.json"
+    if latest_alpha_model_path.exists():
+        try:
+            model = json.loads(latest_alpha_model_path.read_text(encoding="utf-8"))
+            per_stock = model.get("perStockParameters") or {}
+            stock_model = per_stock.get(symbol.upper()) or per_stock.get(symbol)
+            if stock_model and stock_model.get("params"):
+                params = dict(stock_model["params"])
+                return {
+                    "mode": params.get("mode", "legacy_ot"),
+                    "qHead": params.get("qHead", 0.8),
+                    "qTail": params.get("qTail", 0.95),
+                    "eta": params.get("eta", eta_param),
+                    "modelSource": "latest_alpha_model",
+                    "modelMarket": market,
+                    "modelSymbol": symbol,
+                    "modelPath": str(latest_alpha_model_path),
+                    "alphaScore": stock_model.get("score"),
+                }
+        except Exception:
+            pass
+
+    if LATEST_MODEL_PATH.exists():
+        try:
+            model = json.loads(LATEST_MODEL_PATH.read_text(encoding="utf-8"))
+            for item in model.get("marketSummary", []):
+                if item.get("market") == market and item.get("bestParams"):
+                    params = dict(item["bestParams"])
+                    params.update({"modelSource": "legacy_training_model", "modelMarket": market, "modelSymbol": symbol, "modelPath": str(LATEST_MODEL_PATH)})
+                    return params
+        except Exception:
+            pass
+
+    latest_growth_model_path = STRATEGY_MODEL_DIR / market / "latest_growth_model.json"
+    if latest_growth_model_path.exists():
+        try:
+            model = json.loads(latest_growth_model_path.read_text(encoding="utf-8"))
+            params = dict(model.get("parameters") or {})
+            if params:
+                return {
+                    "mode": params.get("mode", "legacy_ot"),
+                    "qHead": params.get("qHead", 0.8),
+                    "qTail": params.get("qTail", 0.95),
+                    "eta": params.get("eta", eta_param),
+                    "modelSource": "latest_growth_model",
+                    "modelMarket": market,
+                    "modelSymbol": symbol,
+                    "modelPath": str(latest_growth_model_path),
+                    "validationGate": model.get("validationGate", {}),
+                }
+        except Exception:
+            pass
+    return {"mode": "legacy_ot", "qHead": 0.8, "qTail": 0.95, "eta": eta_param, "modelSource": "fallback", "modelMarket": market, "modelSymbol": symbol}
+
+
+def display_tencent_symbol(stock_code: str) -> str:
+    try:
+        return normalize_tencent_symbols(stock_code)[0]
+    except Exception:
+        return stock_code
+
+
+# ===================== 4. 并行回测调度 =====================
 def run_backtest(stock_code: str, stock_name: str, start_date: str, end_date: str, eta_param: float = 0.5) -> dict:
-    """运行单只股票的 PT 框架和均线策略回测。"""
+    """并行运行经典策略和 PT 策略，统一合并为页面使用的结果。"""
+    tencent_symbol = display_tencent_symbol(stock_code)
     yahoo_symbol = normalize_yahoo_symbol(stock_code)
+    pt_params = load_model_params_for_symbol(stock_code, eta_param)
     df_raw = get_stock_data(stock_code, start_date, end_date)
     df_raw = split_long_tail_bucket(df_raw)
 
-    ret_arr = df_raw["daily_ret"].values
-    vol_arr = df_raw["vol_20d"].values
-    n_data = len(ret_arr)
-
-    pt_weights = pt_rank_weight(ret_arr, vol_arr, eta=eta_param)
-    df_raw["pt_weight"] = pt_weights
-
-    pt_y_all = generate_pt_sample(n_data)
-    df_raw["ret_perturbed"] = df_raw["daily_ret"].copy()
-
-    mask_ml = df_raw["bucket"].isin(["M", "L"])
-    df_raw.loc[mask_ml, "ret_perturbed"] = pt_ot_perturb(
-        df_raw.loc[mask_ml, "daily_ret"].values,
-        pt_y_all[mask_ml],
-    )
-
-    # 真实使用原始价格路径；量子使用扰动收益率重建一条独立价格路径。
-    pt_factors = 1 + df_raw["ret_perturbed"]
-    pt_factors.iloc[0] = 1
-    df_raw["pt_close"] = float(df_raw["close"].iloc[0]) * pt_factors.cumprod()
-    pt_scale = df_raw["pt_close"] / df_raw["close"]
-    df_raw["pt_open"] = df_raw["open"] * pt_scale
-    df_raw["pt_high"] = df_raw["high"] * pt_scale
-    df_raw["pt_low"] = df_raw["low"] * pt_scale
-    df_raw["pt_high"] = np.maximum.reduce([df_raw["pt_high"], df_raw["pt_open"], df_raw["pt_close"]])
-    df_raw["pt_low"] = np.minimum.reduce([df_raw["pt_low"], df_raw["pt_open"], df_raw["pt_close"]])
-
-    uniform_strategy = build_strategy(df_raw, "uniform", "open", "high", "low", "close", "daily_ret", "close", "daily_ret")
-    pt_strategy = build_strategy(df_raw, "pt", "pt_open", "pt_high", "pt_low", "pt_close", "ret_perturbed", "close", "daily_ret")
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        classic_future = executor.submit(compute_classic_strategy, df_raw)
+        pt_future = executor.submit(
+            compute_pt_strategy,
+            df_raw,
+            q_head=float(pt_params.get("qHead", 0.8)),
+            q_tail=float(pt_params.get("qTail", 0.95)),
+            eta_param=float(pt_params.get("eta", eta_param)),
+            mode=str(pt_params.get("mode", "legacy_ot")),
+        )
+        classic_result = classic_future.result()
+        pt_result = pt_future.result()
 
     chart_df = df_raw.reset_index()
     chart_df["date"] = chart_df["date"].dt.strftime("%Y-%m-%d")
 
     return {
         "stock": {
-            "symbol": stock_code,
+            "symbol": yahoo_symbol,
+            "requestSymbol": stock_code,
             "yahooSymbol": yahoo_symbol,
+            "tencentSymbol": tencent_symbol,
             "name": stock_name or yahoo_symbol,
         },
         "dateRange": {
@@ -311,29 +363,34 @@ def run_backtest(stock_code: str, stock_name: str, start_date: str, end_date: st
             for key, value in df_raw["bucket"].value_counts(normalize=True).sort_index().items()
         },
         "summary": {
-            "eta": eta_param,
-            "originMean": round(float(df_raw["daily_ret"].mean()), 6),
-            "perturbedMean": round(float(df_raw["ret_perturbed"].mean()), 6),
+            "mode": pt_result["summary"]["mode"],
+            "qHead": pt_result["summary"]["qHead"],
+            "qTail": pt_result["summary"]["qTail"],
+            "eta": pt_result["summary"]["eta"],
+            "modelSource": pt_params.get("modelSource", "unknown"),
+            "modelMarket": pt_params.get("modelMarket"),
+            "modelPath": pt_params.get("modelPath"),
+            "alphaScore": pt_params.get("alphaScore"),
+            "validationGate": pt_params.get("validationGate"),
+            "originMean": pt_result["summary"]["originMean"],
+            "perturbedMean": pt_result["summary"]["perturbedMean"],
         },
         "metrics": {
-            "uniform": uniform_strategy["metrics"],
-            "pt": pt_strategy["metrics"],
+            "uniform": classic_result["metrics"],
+            "pt": pt_result["metrics"],
         },
         "series": {
             "dates": chart_df["date"].tolist(),
-            "uniform": build_chart_series(chart_df, uniform_strategy),
-            "pt": build_chart_series(chart_df, pt_strategy),
-            "netUniform": clean_numeric_list(chart_df["uniform_net"], 6),
-            "netPt": clean_numeric_list(chart_df["pt_net"], 6),
+            "uniform": classic_result["series"],
+            "pt": pt_result["series"],
+            "netUniform": classic_result["net"],
+            "netPt": pt_result["net"],
         },
         "trades": {
-            "uniform": uniform_strategy["trades"],
-            "pt": pt_strategy["trades"],
+            "uniform": classic_result["trades"],
+            "pt": pt_result["trades"],
         },
-        "tailSamples": chart_df[chart_df["bucket"] == "L"][["date", "close", "daily_ret", "vol_20d", "pt_weight"]]
-        .head(10)
-        .round(6)
-        .to_dict(orient="records"),
+        "tailSamples": pt_result["tailSamples"],
     }
 
 
@@ -457,7 +514,7 @@ def write_html_report(result: dict, html_file: str = "backtest_report.html") -> 
 </head>
 <body>
     <div class="container">
-        <h1>量化策略回测报告 - {stock['name']} ({stock['yahooSymbol']})</h1>
+        <h1>量化策略回测报告 - {stock['name']} ({stock['tencentSymbol']})</h1>
         <div class="chart-wrapper">
             <img src="data:image/png;base64,{image_base64}" alt="回测图表">
         </div>
@@ -475,7 +532,7 @@ def print_console_report(result: dict) -> None:
     stock = result["stock"]
     date_range = result["dateRange"]
     print("=" * 60)
-    print(f"【{stock['name']} {stock['yahooSymbol']}】原始数据行数: {date_range['rows']}")
+    print(f"【{stock['name']} {stock['tencentSymbol']}】原始数据行数: {date_range['rows']}")
     print(f"数据区间: {date_range['start']} ~ {date_range['end']}")
 
     print("\n【样本分桶统计】")
@@ -508,7 +565,7 @@ def print_console_report(result: dict) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="PT 重尾长尾策略回测")
-    parser.add_argument("--symbol", default="688027.SS", help="股票代码，支持 Yahoo Finance 代码，如 688027.SS、AAPL、0700.HK、BTC-USD")
+    parser.add_argument("--symbol", default="688027.SS", help="股票代码，支持腾讯源代码，如 688027.SS、AAPL、0700.HK")
     parser.add_argument("--name", default="国盾量子", help="股票显示名称")
     parser.add_argument("--start", default="20220101", help="开始日期，如 20220101")
     parser.add_argument("--end", default=datetime.now().strftime("%Y%m%d"), help="结束日期，如 20260601")
